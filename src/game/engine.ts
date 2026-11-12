@@ -9,7 +9,7 @@ import arrowSrc from "@/assets/sprite-arrow.png";
 import potionSrc from "@/assets/sprite-potion.png";
 import heartItemSrc from "@/assets/sprite-heart.png";
 import swordItemSrc from "@/assets/sprite-sword.png";
-import bootsItemSrc from "@/assets/sprite-boots.svg";
+import bootsItemSrc from "@/assets/sprite-boots.png";
 import relicItemSrc from "@/assets/sprite-cafe.png";
 
 export type HUD = { hp: number; maxHp: number; dmg: number; rooms: number; total: number; weapon: "melee" | "bow"; hasBow: boolean; status: "play" | "dead" | "win"; msg: string };
