@@ -11,9 +11,12 @@ import heartItemSrc from "@/assets/sprite-heart.png";
 import swordItemSrc from "@/assets/sprite-sword.png";
 import bootsItemSrc from "@/assets/sprite-boots.png";
 import relicItemSrc from "@/assets/sprite-cafe.png";
+import attackCursorSrc from "@/assets/sprite-attack-cursor.png";
+import heroAttackSrc from "@/assets/hero-attack.png";
 
-export type HUD = { hp: number; maxHp: number; dmg: number; rooms: number; total: number; weapon: "melee" | "bow"; hasBow: boolean; status: "play" | "dead" | "win"; msg: string };
-type Enemy = { x: number; y: number; hp: number; max: number; spd: number; r: number; kind: "slime" | "bat" | "boss"; hit: number; shotCd: number };
+export type GameMode = "dungeon" | "waves";
+export type HUD = { hp: number; maxHp: number; dmg: number; rooms: number; total: number; weapon: "melee" | "bow"; hasBow: boolean; status: "play" | "dead" | "win"; msg: string; mode: GameMode; wave: number; enemiesRemaining: number; waveBreak: number };
+type Enemy = { x: number; y: number; hp: number; max: number; spd: number; r: number; kind: "slime" | "bat" | "boss"; hit: number; shotCd: number; moveT: number };
 type Item = { x: number; y: number; kind: "heart" | "sword" | "boots" | "bow" | "potion" | "relic" };
 type Projectile = { x: number; y: number; vx: number; vy: number; life: number; owner: "player" | "enemy"; damage: number };
 type Room = { gx: number; gy: number; enemies: Enemy[]; items: Item[]; cleared: boolean; visited: boolean; kind: "start" | "normal" | "boss" };
@@ -23,10 +26,12 @@ const DIRS: [number, number][] = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 const HEAL_DROP_CHANCE = 0.25;
 const HEAL_AMOUNT = 2;
 
-export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void) {
+export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mode: GameMode = "dungeon") {
   const mkImg = (src: string) => { const image = new Image(); image.src = src; return image; };
   const SPR = {
     hero: mkImg(heroSrc),
+    // Placeholder attack pose: replace this source when the dedicated asset is ready.
+    heroAttack: mkImg(heroAttackSrc),
     heroRanged: mkImg(rangedHeroSrc),
     slime: mkImg(slimeSrc),
     bat: mkImg(batSrc),
@@ -38,6 +43,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void) {
     swordItem: mkImg(swordItemSrc),
     bootsItem: mkImg(bootsItemSrc),
     relicItem: mkImg(relicItemSrc),
+    attackCursor: mkImg(attackCursorSrc),
   };
   const ITEM_SPRITES: Record<Item["kind"], HTMLImageElement> = {
     heart: SPR.heartItem,
@@ -55,7 +61,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void) {
   // Generate dungeon via random walk
   let cx = 0, cy = 0;
   rooms.set(key(0, 0), mkRoom(0, 0, "start"));
-  while (rooms.size < 9) {
+  while (mode === "dungeon" && rooms.size < 9) {
     const [dx, dy] = DIRS[Math.floor(Math.random() * 4)]!;
     cx += dx; cy += dy;
     if (!rooms.has(key(cx, cy))) rooms.set(key(cx, cy), mkRoom(cx, cy, "normal"));
@@ -67,10 +73,12 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void) {
     const [x, y] = q.shift()!;
     for (const [dx, dy] of DIRS) { const k = key(x + dx, y + dy); if (rooms.has(k) && !dist.has(k)) { dist.set(k, dist.get(key(x, y))! + 1); q.push([x + dx, y + dy]); } }
   }
-  const far = [...dist.entries()].sort((a, b) => b[1] - a[1])[0]![0];
-  const boss = rooms.get(far)!; boss.kind = "boss";
-  boss.enemies = [{ x: 5.5, y: 4, hp: 30, max: 30, spd: 0.75, r: 0.7, kind: "boss", hit: 0, shotCd: 0 }];
-  boss.items = [];
+  if (mode === "dungeon") {
+    const far = [...dist.entries()].sort((a, b) => b[1] - a[1])[0]![0];
+    const boss = rooms.get(far)!; boss.kind = "boss";
+    boss.enemies = [{ x: 5.5, y: 4, hp: 30, max: 30, spd: 1.7, r: 0.5, kind: "boss", hit: 0, shotCd: 0, moveT: 0 }];
+    boss.items = [];
+  }
 
   function mkRoom(gx: number, gy: number, kind: Room["kind"]): Room {
     const enemies: Enemy[] = [];
@@ -78,7 +86,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void) {
       const n = 2 + Math.floor(Math.random() * 3);
       for (let i = 0; i < n; i++) {
         const bat = Math.random() < 0.4;
-        enemies.push({ x: rnd(2, 9), y: rnd(2, 6), hp: bat ? 2 : 4, max: bat ? 2 : 4, spd: bat ? 0 : 0.65, r: 0.35, kind: bat ? "bat" : "slime", hit: 0, shotCd: bat ? rnd(0.7, 1.5) : 0 });
+        enemies.push({ x: rnd(2, 9), y: rnd(2, 6), hp: bat ? 2 : 4, max: bat ? 2 : 4, spd: bat ? 0 : 0.65, r: bat ? 0.35 : 0.5, kind: bat ? "bat" : "slime", hit: 0, shotCd: bat ? rnd(0.7, 1.5) : 0, moveT: 0 });
       }
     }
     return { gx, gy, enemies, items: [], cleared: kind === "start", visited: kind === "start", kind };
@@ -87,15 +95,49 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void) {
   const p = { x: 5.5, y: 5.5, hp: 6, maxHp: 6, dmg: 1, spd: 3.2, fx: 0, fy: 1, atk: 0, cd: 0, inv: 0, weapon: "melee" as "melee" | "bow", hasBow: false };
   const projectiles: Projectile[] = [];
   let room = rooms.get(key(0, 0))!;
-  let status: HUD["status"] = "play";
+  let wave = mode === "waves" ? 1 : 0;
+  let waveBreak = 0;
   let msg = "Encontre o Café !";
   let msgT = 4;
+  function spawnWave(n: number) {
+    room.kind = n % 10 === 0 ? "boss" : "normal";
+    room.cleared = false;
+    room.enemies = [];
+    room.items = [];
+    const bossWave = n % 10 === 0;
+    const corners: [number, number][] = [[0.9, 0.9], [10.1, 0.9], [0.9, 10.1], [10.1, 10.1]];
+    if (bossWave) {
+      const hp = 30 + (n / 10 - 1) * 12;
+      const [x, y] = corners[Math.floor(Math.random() * corners.length)]!;
+      room.enemies.push({ x, y, hp, max: hp, spd: 1.7 + n * 0.015, r: 0.5, kind: "boss", hit: 0, shotCd: 0, moveT: 0 });
+      say(`O chefe da onda ${n} chegou!`);
+      return;
+    }
+    const count = Math.min(3 + Math.floor(n * 0.8), 18);
+    for (let i = 0; i < count; i++) {
+      const bat = Math.random() < 0.35;
+      const hp = (bat ? 2 : 4) + Math.floor((n - 1) / 10);
+      const [cornerX, cornerY] = corners[i % corners.length]!;
+      const x = bat ? rnd(2.2, 8.8) : cornerX + rnd(-0.35, 0.35);
+      const y = bat ? rnd(2.2, 8.8) : cornerY + rnd(-0.35, 0.35);
+      room.enemies.push({ x, y, hp, max: hp, spd: bat ? 0 : 0.65 + n * 0.025, r: bat ? 0.35 : 0.5, kind: bat ? "bat" : "slime", hit: 0, shotCd: bat ? rnd(0.7, 1.5) : 0, moveT: 0 });
+    }
+    say(`Onda ${n} começando!`);
+  }
+  if (mode === "waves") spawnWave(wave);
+  let status: HUD["status"] = "play";
   const keys = new Set<string>();
+  const gameKeys = new Set(["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "q", " "]);
   const kd = (e: KeyboardEvent) => {
     const k = e.key.toLowerCase();
+    if (!gameKeys.has(k)) {
+      if (k === "tab") e.preventDefault();
+      return;
+    }
+    e.preventDefault();
     keys.add(k);
     if (k === "q" && !e.repeat && p.hasBow) { p.weapon = p.weapon === "melee" ? "bow" : "melee"; say(p.weapon === "bow" ? "Besta equipada!" : "Lâmina equipada!"); }
-    if (e.key === " ") { e.preventDefault(); attack(); }
+    if (k === " ") attack();
   };
   const ku = (e: KeyboardEvent) => keys.delete(e.key.toLowerCase());
   window.addEventListener("keydown", kd); window.addEventListener("keyup", ku);
@@ -105,8 +147,20 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void) {
   function say(m: string) { msg = m; msgT = 3; }
   function clearRoomIfNeeded() {
     if (room.enemies.length || room.cleared) return;
+    if (mode === "waves") {
+      room.cleared = true;
+      const healDrops = 1 + Math.floor(wave / 5);
+      for (let i = 0; i < healDrops; i++) room.items.push({ x: 3 + i * 1.3, y: 5.5, kind: "potion" });
+      const buffs = wave % 10 === 0 ? 2 : 1 + (wave % 5 === 0 ? 1 : 0);
+      const buffKinds: Item["kind"][] = ["heart", "sword", "boots", "bow"];
+      for (let i = 0; i < buffs; i++) room.items.push({ x: 4 + i * 1.2, y: 6.5, kind: buffKinds[Math.floor(Math.random() * buffKinds.length)]! });
+      if (wave === 3) room.items.push({ x: 5.5, y: 7.5, kind: "bow" });
+      waveBreak = 10;
+      say(`Onda ${wave} concluída! Recolha os itens. Próxima onda em breve...`);
+      return;
+    }
     const phase = [...rooms.values()].filter((candidate) => candidate.visited).length;
-    const guaranteedBowDrop = phase === 3;
+    const guaranteedBowDrop = phase === 1;
     room.cleared = true;
     if (room.kind === "boss") {
       room.items.push({ x: 5.5, y: 5.5, kind: "relic" });
@@ -145,7 +199,8 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void) {
     }
     p.cd = 0.35;
     for (const e of room.enemies) {
-      const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy);
+      const hitX = e.x, hitY = e.y + (e.kind === "bat" ? 0.25 : 0);
+      const dx = hitX - p.x, dy = hitY - p.y, d = Math.hypot(dx, dy);
       if (d < 1.3 + e.r && (dx * p.fx + dy * p.fy) / (d || 1) > 0.2) {
         e.hp -= p.dmg; e.hit = 0.15; e.x += (dx / d) * 0.5; e.y += (dy / d) * 0.5;
       }
@@ -183,7 +238,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void) {
     if (l) { ix /= l; iy /= l; p.fx = ix; p.fy = iy; }
     let nx = p.x + ix * p.spd * dt, ny = p.y + iy * p.spd * dt;
     const mid = (v: number) => Math.abs(v - 5.5) < 0.8;
-    const open = room.cleared;
+    const open = mode === "dungeon" && room.cleared;
     // walls with door gaps
     if (ny < 0.4 && !(open && mid(nx) && door(0))) ny = 0.4;
     if (ny > W - 0.4 && !(open && mid(nx) && door(2))) ny = W - 0.4;
@@ -196,10 +251,15 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void) {
       room = rooms.get(key(room.gx + dx, room.gy + dy))!; room.visited = true; p.x = px; p.y = py;
       if (room.kind === "boss" && !room.cleared) say("Um guardião protege o tesouro!");
     };
-    if (p.y < -0.2) go(0, -1, 5.5, W - 0.6);
-    else if (p.y > W + 0.2) go(0, 1, 5.5, 0.6);
-    else if (p.x < -0.2) go(-1, 0, W - 0.6, 5.5);
-    else if (p.x > W + 0.2) go(1, 0, 0.6, 5.5);
+    if (mode === "dungeon" && p.y < -0.2) go(0, -1, 5.5, W - 0.6);
+    else if (mode === "dungeon" && p.y > W + 0.2) go(0, 1, 5.5, 0.6);
+    else if (mode === "dungeon" && p.x < -0.2) go(-1, 0, W - 0.6, 5.5);
+    else if (mode === "dungeon" && p.x > W + 0.2) go(1, 0, 0.6, 5.5);
+
+    if (mode === "waves" && waveBreak > 0) {
+      waveBreak = Math.max(0, waveBreak - dt);
+      if (waveBreak === 0) { wave += 1; spawnWave(wave); }
+    }
 
     for (const e of room.enemies) {
       e.hit -= dt;
@@ -213,9 +273,17 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void) {
         continue;
       }
 
-      e.x += (dx / d) * e.spd * dt; e.y += (dy / d) * e.spd * dt;
+      if (e.kind === "boss") {
+        // Start with a sideways dodge and use broad, slower turns while closing in.
+        e.moveT += dt;
+        const zigzag = Math.cos(e.moveT * 4.5) * 1.5;
+        e.x += ((dx / d) - (dy / d) * zigzag) * e.spd * dt;
+        e.y += ((dy / d) + (dx / d) * zigzag) * e.spd * dt;
+      } else {
+        e.x += (dx / d) * e.spd * dt; e.y += (dy / d) * e.spd * dt;
+      }
       e.x = Math.max(0.5, Math.min(W - 0.5, e.x)); e.y = Math.max(0.5, Math.min(W - 0.5, e.y));
-      if (d < e.r + 0.35) hurtPlayer(e.kind === "boss" ? 2 : 1, dx, dy);
+      if (d < e.r + 0.35) hurtPlayer(e.kind === "boss" ? 3 : 1, dx, dy);
     }
     for (let i = projectiles.length - 1; i >= 0; i--) {
       const shot = projectiles[i]!;
@@ -223,7 +291,8 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void) {
       let hit = false;
       if (shot.owner === "player") {
         for (const e of room.enemies) {
-          if (Math.hypot(e.x - shot.x, e.y - shot.y) > e.r + 0.2) continue;
+          const hitX = e.x, hitY = e.y + (e.kind === "bat" ? 0.25 : 0);
+          if (Math.hypot(hitX - shot.x, hitY - shot.y) > e.r + 0.2) continue;
           e.hp -= shot.damage; e.hit = 0.15;
           const distance = Math.hypot(shot.vx, shot.vy) || 1;
           e.x += (shot.vx / distance) * 0.18; e.y += (shot.vy / distance) * 0.18;
@@ -270,7 +339,10 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void) {
     const g = ctx.createRadialGradient(cw / 2, ch / 2, 50, cw / 2, ch / 2, cw * 0.7);
     g.addColorStop(0, "#1d1a22"); g.addColorStop(1, "#08070a");
     ctx.fillStyle = g; ctx.fillRect(0, 0, cw, ch);
-    ox = cw / 2; oy = ch / 2 - (W * TH) / 2 + 20;
+    // Scale the dungeon to the available viewport while leaving room for the HUD.
+    const sceneScale = Math.min((cw - 48) / (W * TW), (ch - 112) / (W * TH), 2.8);
+    ctx.setTransform(dpr * sceneScale, 0, 0, dpr * sceneScale, 0, 0);
+    ox = cw / (2 * sceneScale); oy = ch / (2 * sceneScale) - (W * TH) / 2 + 20;
     const boss = room.kind === "boss";
     // floor
     for (let i = 0; i < W; i++) for (let j = 0; j < W; j++) {
@@ -322,9 +394,9 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void) {
     for (const e of room.enemies) list.push({
       d: e.x + e.y, draw: () => {
         const [sx, sy] = iso(e.x, e.y); const s = e.r * 40;
-        const lift = e.kind === "bat" ? 26 + Math.sin(t / 100) * 5 : s * 0.7;
+        const lift = e.kind === "bat" ? 8 : s * 0.7 - 8;
         shadow(sx, sy, s * 0.8);
-        const img = SPR[e.kind]; const size = e.kind === "boss" ? 120 : e.kind === "bat" ? 80 : 76;
+        const img = SPR[e.kind]; const size = e.kind === "bat" ? 80 : 76;
         const flip = e.x - e.y > p.x - p.y;
         ctx.save(); ctx.translate(sx, sy - lift + (e.kind === "bat" ? size / 2 : s * 0.7)); if (flip) ctx.scale(-1, 1);
         if (e.hit > 0) ctx.filter = "brightness(3)";
@@ -338,11 +410,11 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void) {
         const [sx, sy] = iso(shot.x, shot.y);
         const [vx, vy] = [(shot.vx - shot.vy) * TW / 2, (shot.vx + shot.vy) * TH / 2];
         if (shot.owner === "player" && SPR.arrow.complete && SPR.arrow.naturalWidth > 0) {
-          ctx.save(); ctx.translate(sx, sy - 14); ctx.rotate(Math.atan2(vy, vx));
-          ctx.drawImage(SPR.arrow, -24, -12, 62, 62); ctx.restore();
+          ctx.save(); ctx.translate(sx, sy - 40); ctx.rotate(Math.atan2(vy, vx));
+          ctx.scale(-1, 1); ctx.drawImage(SPR.arrow, -24, -12, 62, 62); ctx.restore();
         } else if (shot.owner === "enemy" && SPR.bow.complete && SPR.bow.naturalWidth > 0) {
           ctx.save(); ctx.translate(sx, sy - 24); ctx.rotate(Math.atan2(vy, vx));
-          ctx.drawImage(SPR.arrow, -21, -21, 62, 62); ctx.restore();
+          ctx.scale(-1, 1); ctx.drawImage(SPR.arrow, -21, -21, 62, 62); ctx.restore();
         }
       }
     });
@@ -350,17 +422,22 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void) {
       d: p.x + p.y, draw: () => {
         const [sx, sy] = iso(p.x, p.y); shadow(sx, sy, 13);
         if (p.inv > 0 && Math.floor(t / 80) % 2) return;
+        const [fx, fy] = [(p.fx - p.fy) * TW / 2, (p.fx + p.fy) * TH / 2];
+        const [cursorX, cursorY] = iso(p.x + p.fx * 0.85, p.y + p.fy * 0.85);
+        ctx.save();
+        if (SPR.attackCursor.complete && SPR.attackCursor.naturalWidth > 0) {
+          ctx.save(); ctx.translate(cursorX, cursorY - 3); ctx.rotate(Math.atan2(fy, fx));
+          ctx.scale(-1, 1);
+          const cursorSize = 50;
+          const cursorAspect = SPR.attackCursor.naturalWidth / SPR.attackCursor.naturalHeight;
+          const cursorWidth = cursorSize * cursorAspect;
+          ctx.drawImage(SPR.attackCursor, -cursorWidth / 2, -cursorSize / 2, cursorWidth, cursorSize); ctx.restore();
+        }
+        ctx.restore();
         const [hx] = [(p.fx - p.fy)];
         ctx.save(); ctx.translate(sx, sy + 4); if (hx < -0.05) ctx.scale(-1, 1);
-        const heroSprite = p.weapon === "bow" ? SPR.heroRanged : SPR.hero;
+        const heroSprite = p.weapon === "bow" ? SPR.heroRanged : p.atk > 0 ? SPR.heroAttack : SPR.hero;
         if (heroSprite.complete && heroSprite.naturalWidth > 0) ctx.drawImage(heroSprite, -38, -76, 76, 76); ctx.restore();
-        const [fx, fy] = [(p.fx - p.fy) * TW / 2, (p.fx + p.fy) * TH / 2]; const fl = Math.hypot(fx, fy) || 1;
-        const [cursorX, cursorY] = iso(p.x + p.fx * 1.45, p.y + p.fy * 1.45);
-        ctx.save();
-        ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(cursorX, cursorY + 2, 10, 5, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = "rgba(255,212,71,0.95)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(cursorX, cursorY, 9, 4.5, 0, 0, Math.PI * 2); ctx.stroke();
-        ctx.fillStyle = "#fff0b0"; ctx.beginPath(); ctx.arc(cursorX, cursorY, 2, 0, Math.PI * 2); ctx.fill();
-        ctx.restore();
         if (p.weapon === "melee" && p.atk > 0) {
           ctx.strokeStyle = "rgba(255,240,200,0.7)"; ctx.lineWidth = 3; const a = Math.atan2(fy, fx); ctx.beginPath(); ctx.arc(sx, sy - 20, 40, a - 0.9, a + 0.9); ctx.stroke(); ctx.lineWidth = 1;
         }
@@ -383,7 +460,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void) {
     const dt = Math.min((t - last) / 1000, 0.05); last = t;
     update(dt); render(t);
     hudT -= dt;
-    if (hudT <= 0) { hudT = 0.1; onHud({ hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, rooms: xsVisited(), total: rooms.size, weapon: p.weapon, hasBow: p.hasBow, status, msg }); }
+    if (hudT <= 0) { hudT = 0.1; onHud({ hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, rooms: xsVisited(), total: rooms.size, weapon: p.weapon, hasBow: p.hasBow, status, msg, mode, wave, enemiesRemaining: room.enemies.length, waveBreak }); }
     raf = requestAnimationFrame(loop);
   };
   const xsVisited = () => [...rooms.values()].filter((r) => r.visited).length;
