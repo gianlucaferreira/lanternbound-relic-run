@@ -1,4 +1,10 @@
 // Plain TS roguelike engine: logic + isometric canvas rendering.
+import heroSrc from "@/assets/sprite-hero.png";
+import slimeSrc from "@/assets/sprite-slime.png";
+import batSrc from "@/assets/sprite-bat.png";
+import bossSrc from "@/assets/sprite-boss.png";
+const mkImg = (src: string) => { const i = new Image(); i.src = src; return i; };
+const SPR = { hero: mkImg(heroSrc), slime: mkImg(slimeSrc), bat: mkImg(batSrc), boss: mkImg(bossSrc) };
 export type HUD = { hp: number; maxHp: number; dmg: number; rooms: number; total: number; status: "play" | "dead" | "win"; msg: string };
 type Enemy = { x: number; y: number; hp: number; max: number; spd: number; r: number; kind: "slime" | "bat" | "boss"; hit: number };
 type Item = { x: number; y: number; kind: "heart" | "sword" | "boots" | "relic" };
@@ -203,21 +209,20 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void) {
       const [sx, sy] = iso(e.x, e.y); const s = e.r * 40;
       const lift = e.kind === "bat" ? 26 + Math.sin(t / 100) * 5 : s * 0.7;
       shadow(sx, sy, s * 0.8);
-      const col = e.hit > 0 ? "#ffffff" : e.kind === "slime" ? "#5fbf6a" : e.kind === "bat" ? "#7b5ea8" : "#a8322d";
-      ctx.fillStyle = col; ctx.beginPath();
-      if (e.kind === "slime") ctx.ellipse(sx, sy - lift, s, s * (0.75 + Math.sin(t / 160 + e.x) * 0.08), 0, 0, Math.PI * 2);
-      else ctx.arc(sx, sy - lift, s * (e.kind === "bat" ? 0.6 : 1), 0, Math.PI * 2);
-      ctx.fill();
-      if (e.kind === "bat") { const w = Math.sin(t / 50) * 6; poly([[sx - 4, sy - lift], [sx - 20, sy - lift - 6 + w], [sx - 12, sy - lift + 4]], col); poly([[sx + 4, sy - lift], [sx + 20, sy - lift - 6 + w], [sx + 12, sy - lift + 4]], col); }
-      ctx.fillStyle = "#ffe97a"; ctx.fillRect(sx - s * 0.35, sy - lift - 3, 3, 3); ctx.fillRect(sx + s * 0.25, sy - lift - 3, 3, 3);
-      if (e.kind === "boss") { ctx.fillStyle = "#222"; ctx.fillRect(sx - 30, sy - lift - s - 14, 60, 6); ctx.fillStyle = "#e84a5f"; ctx.fillRect(sx - 30, sy - lift - s - 14, 60 * (e.hp / e.max), 6); }
+      const img = SPR[e.kind]; const size = e.kind === "boss" ? 150 : e.kind === "bat" ? 64 : 60;
+      const flip = e.x - e.y > p.x - p.y;
+      ctx.save(); ctx.translate(sx, sy - lift + (e.kind === "bat" ? size / 2 : s * 0.7)); if (flip) ctx.scale(-1, 1);
+      if (e.hit > 0) ctx.filter = "brightness(3)";
+      ctx.drawImage(img, -size / 2, -size, size, size); ctx.restore();
+      const lift2 = e.kind === "boss" ? size - s * 0.7 - 10 : 0;
+      if (e.kind === "boss") { ctx.fillStyle = "#222"; ctx.fillRect(sx - 30, sy - lift - lift2 - s - 14, 60, 6); ctx.fillStyle = "#e84a5f"; ctx.fillRect(sx - 30, sy - lift - lift2 - s - 14, 60 * (e.hp / e.max), 6); }
     } });
     list.push({ d: p.x + p.y, draw: () => {
       const [sx, sy] = iso(p.x, p.y); shadow(sx, sy, 13);
       if (p.inv > 0 && Math.floor(t / 80) % 2) return;
-      ctx.fillStyle = "#2f5d8a"; ctx.fillRect(sx - 9, sy - 30, 18, 24);
-      ctx.fillStyle = "#c9d3dd"; ctx.beginPath(); ctx.arc(sx, sy - 36, 9, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#d8a24a"; ctx.fillRect(sx - 9, sy - 18, 18, 3);
+      const [hx] = [(p.fx - p.fy)];
+      ctx.save(); ctx.translate(sx, sy + 4); if (hx > 0.05) ctx.scale(-1, 1);
+      ctx.drawImage(SPR.hero, -38, -76, 76, 76); ctx.restore();
       const [fx, fy] = [(p.fx - p.fy) * TW / 2, (p.fx + p.fy) * TH / 2]; const fl = Math.hypot(fx, fy) || 1;
       const reach = p.atk > 0 ? 34 : 16;
       ctx.strokeStyle = "#e9eef3"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(sx, sy - 20); ctx.lineTo(sx + (fx / fl) * reach, sy - 20 + (fy / fl) * reach); ctx.stroke(); ctx.lineWidth = 1;
