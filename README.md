@@ -1,14 +1,16 @@
-# Welcome to your Lovable project
+# Lanternbound Relic Run
+
+Crie um jogo em HTML5 no modelo 2.5D. Estilo Rogue Like. A ideia é o protagonista precisa passar por diversas salas derrotando inimigos e coletando itens para progredir em uma dungeon. E procurando um item no final da Dungeon.
 
 This project was built with [Lovable](https://lovable.dev).
 
 ## Build with Lovable
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/917b98ba-4ccd-4400-b458-6ddf79586b85).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 
@@ -20,10 +22,3 @@ cd <repository-name>
 npm i
 npm run dev
 ```
-
-## Built with
-
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
