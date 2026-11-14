@@ -13,13 +13,11 @@ import bootsItemSrc from "@/assets/sprite-boots.png";
 import relicItemSrc from "@/assets/sprite-cafe.png";
 import attackCursorSrc from "@/assets/sprite-attack-cursor.png";
 import heroAttackSrc from "@/assets/hero-attack.png";
+import type { Enemy, HUD, Item, Projectile, Room, GameMode } from "./types";
+import { completeDungeonRoom, generateDungeon } from "./modes/dungeon";
+import { completeWave, spawnWave } from "./modes/waves";
 
-export type GameMode = "dungeon" | "waves";
-export type HUD = { hp: number; maxHp: number; dmg: number; rooms: number; total: number; weapon: "melee" | "bow"; hasBow: boolean; status: "play" | "dead" | "win"; msg: string; mode: GameMode; wave: number; enemiesRemaining: number; waveBreak: number };
-type Enemy = { x: number; y: number; hp: number; max: number; spd: number; r: number; kind: "slime" | "bat" | "boss"; hit: number; shotCd: number; moveT: number };
-type Item = { x: number; y: number; kind: "heart" | "sword" | "boots" | "bow" | "potion" | "relic" };
-type Projectile = { x: number; y: number; vx: number; vy: number; life: number; owner: "player" | "enemy"; damage: number };
-type Room = { gx: number; gy: number; enemies: Enemy[]; items: Item[]; cleared: boolean; visited: boolean; kind: "start" | "normal" | "boss" };
+export type { GameMode, HUD } from "./types";
 
 const W = 11, TW = 64, TH = 32, WALL = 46;
 const DIRS: [number, number][] = [[0, -1], [1, 0], [0, 1], [-1, 0]];
@@ -58,27 +56,8 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
   const key = (x: number, y: number) => `${x},${y}`;
   const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 
-  // Generate dungeon via random walk
-  let cx = 0, cy = 0;
-  rooms.set(key(0, 0), mkRoom(0, 0, "start"));
-  while (mode === "dungeon" && rooms.size < 9) {
-    const [dx, dy] = DIRS[Math.floor(Math.random() * 4)]!;
-    cx += dx; cy += dy;
-    if (!rooms.has(key(cx, cy))) rooms.set(key(cx, cy), mkRoom(cx, cy, "normal"));
-  }
-  // farthest room = boss
-  const dist = new Map<string, number>([[key(0, 0), 0]]);
-  const q: [number, number][] = [[0, 0]];
-  while (q.length) {
-    const [x, y] = q.shift()!;
-    for (const [dx, dy] of DIRS) { const k = key(x + dx, y + dy); if (rooms.has(k) && !dist.has(k)) { dist.set(k, dist.get(key(x, y))! + 1); q.push([x + dx, y + dy]); } }
-  }
-  if (mode === "dungeon") {
-    const far = [...dist.entries()].sort((a, b) => b[1] - a[1])[0]![0];
-    const boss = rooms.get(far)!; boss.kind = "boss";
-    boss.enemies = [{ x: 5.5, y: 4, hp: 30, max: 30, spd: 1.7, r: 0.5, kind: "boss", hit: 0, shotCd: 0, moveT: 0 }];
-    boss.items = [];
-  }
+  if (mode === "dungeon") generateDungeon(rooms, key, mkRoom);
+  else rooms.set(key(0, 0), mkRoom(0, 0, "start"));
 
   function mkRoom(gx: number, gy: number, kind: Room["kind"]): Room {
     const enemies: Enemy[] = [];
@@ -99,32 +78,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
   let waveBreak = 0;
   let msg = "Encontre o Café !";
   let msgT = 4;
-  function spawnWave(n: number) {
-    room.kind = n % 10 === 0 ? "boss" : "normal";
-    room.cleared = false;
-    room.enemies = [];
-    room.items = [];
-    const bossWave = n % 10 === 0;
-    const corners: [number, number][] = [[0.9, 0.9], [10.1, 0.9], [0.9, 10.1], [10.1, 10.1]];
-    if (bossWave) {
-      const hp = 30 + (n / 10 - 1) * 12;
-      const [x, y] = corners[Math.floor(Math.random() * corners.length)]!;
-      room.enemies.push({ x, y, hp, max: hp, spd: 1.7 + n * 0.015, r: 0.5, kind: "boss", hit: 0, shotCd: 0, moveT: 0 });
-      say(`O chefe da onda ${n} chegou!`);
-      return;
-    }
-    const count = Math.min(3 + Math.floor(n * 0.8), 18);
-    for (let i = 0; i < count; i++) {
-      const bat = Math.random() < 0.35;
-      const hp = (bat ? 2 : 4) + Math.floor((n - 1) / 10);
-      const [cornerX, cornerY] = corners[i % corners.length]!;
-      const x = bat ? rnd(2.2, 8.8) : cornerX + rnd(-0.35, 0.35);
-      const y = bat ? rnd(2.2, 8.8) : cornerY + rnd(-0.35, 0.35);
-      room.enemies.push({ x, y, hp, max: hp, spd: bat ? 0 : 0.65 + n * 0.025, r: bat ? 0.35 : 0.5, kind: bat ? "bat" : "slime", hit: 0, shotCd: bat ? rnd(0.7, 1.5) : 0, moveT: 0 });
-    }
-    say(`Onda ${n} começando!`);
-  }
-  if (mode === "waves") spawnWave(wave);
+  if (mode === "waves") spawnWave(room, wave, rnd, say);
   let status: HUD["status"] = "play";
   const keys = new Set<string>();
   const gameKeys = new Set(["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "q", " "]);
@@ -148,42 +102,19 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
   function clearRoomIfNeeded() {
     if (room.enemies.length || room.cleared) return;
     if (mode === "waves") {
-      room.cleared = true;
-      const healDrops = 1 + Math.floor(wave / 5);
-      for (let i = 0; i < healDrops; i++) room.items.push({ x: 3 + i * 1.3, y: 5.5, kind: "potion" });
-      const buffs = wave % 10 === 0 ? 2 : 1 + (wave % 5 === 0 ? 1 : 0);
-      const buffKinds: Item["kind"][] = ["heart", "sword", "boots", "bow"];
-      for (let i = 0; i < buffs; i++) room.items.push({ x: 4 + i * 1.2, y: 6.5, kind: buffKinds[Math.floor(Math.random() * buffKinds.length)]! });
-      if (wave === 3) room.items.push({ x: 5.5, y: 7.5, kind: "bow" });
+      completeWave(room, { wave, waveBreak }, say);
       waveBreak = 10;
-      say(`Onda ${wave} concluída! Recolha os itens. Próxima onda em breve...`);
       return;
     }
     const phase = [...rooms.values()].filter((candidate) => candidate.visited).length;
-    const guaranteedBowDrop = phase === 1;
-    room.cleared = true;
-    if (room.kind === "boss") {
-      room.items.push({ x: 5.5, y: 5.5, kind: "relic" });
-      if (guaranteedBowDrop) room.items.push({ x: 5.5, y: 5.5, kind: "bow" });
-      say(guaranteedBowDrop ? "O guardião caiu! Pegue o Café e a besta!" : "O guardião caiu! Pegue o Café!");
-    }
-    else if (guaranteedBowDrop) {
-      room.items.push({ x: 5.5, y: 5.5, kind: "bow" });
-      say("Sala limpa! A besta garantida está no chão...");
-    }
-    else if (Math.random() < 0.8) {
-      const r = Math.random();
-      const kind = r < 0.4 ? "heart" : r < 0.7 ? "sword" : r < 0.85 ? "boots" : "bow";
-      room.items.push({ x: 5.5, y: 5.5, kind });
-      say(kind === "bow" ? "Sala limpa! Uma besta está no chão..." : "Sala limpa! Algo brilha no chão...");
-    } else say("Sala limpa!");
+    completeDungeonRoom(room, phase, say);
   }
   function removeDefeatedEnemies() {
     const survivors: Enemy[] = [];
     for (const enemy of room.enemies) {
       if (enemy.hp > 0) {
         survivors.push(enemy);
-      } else if (Math.random() < HEAL_DROP_CHANCE) {
+      } else if (Math.random() < (mode === "waves" ? 0.1 : HEAL_DROP_CHANCE)) {
         room.items.push({ x: enemy.x, y: enemy.y, kind: "potion" });
       }
     }
@@ -258,7 +189,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
 
     if (mode === "waves" && waveBreak > 0) {
       waveBreak = Math.max(0, waveBreak - dt);
-      if (waveBreak === 0) { wave += 1; spawnWave(wave); }
+      if (waveBreak === 0) { wave += 1; spawnWave(room, wave, rnd, say); }
     }
 
     for (const e of room.enemies) {
@@ -394,7 +325,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     for (const e of room.enemies) list.push({
       d: e.x + e.y, draw: () => {
         const [sx, sy] = iso(e.x, e.y); const s = e.r * 40;
-        const lift = e.kind === "bat" ? 8 : s * 0.7 - 8;
+        const lift = e.kind === "bat" ? 16 : s * 0.7 - 8;
         shadow(sx, sy, s * 0.8);
         const img = SPR[e.kind]; const size = e.kind === "bat" ? 80 : 76;
         const flip = e.x - e.y > p.x - p.y;
