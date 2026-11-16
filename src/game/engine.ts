@@ -20,6 +20,11 @@ import { completeWave, spawnWave } from "./modes/waves";
 export type { GameMode, HUD } from "./types";
 
 const W = 11, TW = 64, TH = 32, WALL = 46;
+// Sprite PNGs were cropped to their opaque bounds from 2048x2048 canvases.
+// Keep their old on-screen footprint while preserving each crop's aspect ratio.
+const SPRITE_SOURCE_SIZE = 2048;
+const spriteWidth = (image: HTMLImageElement, size: number) => size * image.naturalWidth / SPRITE_SOURCE_SIZE;
+const spriteHeight = (image: HTMLImageElement, size: number) => size * image.naturalHeight / SPRITE_SOURCE_SIZE;
 const DIRS: [number, number][] = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 const HEAL_DROP_CHANCE = 0.25;
 const HEAL_AMOUNT = 2;
@@ -319,7 +324,10 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
           const rg = ctx.createRadialGradient(sx, sy - 24, 2, sx, sy - 24, 40); rg.addColorStop(0, "rgba(255,220,90,0.7)"); rg.addColorStop(1, "rgba(255,220,90,0)"); ctx.fillStyle = rg; ctx.fillRect(sx - 40, sy - 64, 80, 80);
         }
         const sprite = ITEM_SPRITES[it.kind];
-        if (sprite.complete && sprite.naturalWidth > 0) ctx.drawImage(sprite, sx - size / 2, sy - size + 4 + b, size, size);
+        if (sprite.complete && sprite.naturalWidth > 0) {
+          const width = spriteWidth(sprite, size), height = spriteHeight(sprite, size);
+          ctx.drawImage(sprite, sx - width / 2, sy - height + 4 + b, width, height);
+        }
       }
     });
     for (const e of room.enemies) list.push({
@@ -331,7 +339,11 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         const flip = e.x - e.y > p.x - p.y;
         ctx.save(); ctx.translate(sx, sy - lift + (e.kind === "bat" ? size / 2 : s * 0.7)); if (flip) ctx.scale(-1, 1);
         if (e.hit > 0) ctx.filter = "brightness(3)";
-        if (img.complete && img.naturalWidth > 0) ctx.drawImage(img, -size / 2, -size, size, size); ctx.restore();
+        if (img.complete && img.naturalWidth > 0) {
+          const width = spriteWidth(img, size), height = spriteHeight(img, size);
+          ctx.drawImage(img, -width / 2, -height, width, height);
+        }
+        ctx.restore();
         const lift2 = e.kind === "boss" ? size - s * 0.7 - 10 : 0;
         if (e.kind === "boss") { ctx.fillStyle = "#222"; ctx.fillRect(sx - 30, sy - lift - lift2 - s - 14, 60, 6); ctx.fillStyle = "#e84a5f"; ctx.fillRect(sx - 30, sy - lift - lift2 - s - 14, 60 * (e.hp / e.max), 6); }
       }
@@ -342,10 +354,12 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         const [vx, vy] = [(shot.vx - shot.vy) * TW / 2, (shot.vx + shot.vy) * TH / 2];
         if (shot.owner === "player" && SPR.arrow.complete && SPR.arrow.naturalWidth > 0) {
           ctx.save(); ctx.translate(sx, sy - 40); ctx.rotate(Math.atan2(vy, vx));
-          ctx.scale(-1, 1); ctx.drawImage(SPR.arrow, -24, -12, 62, 62); ctx.restore();
+          const width = spriteWidth(SPR.arrow, 62), height = spriteHeight(SPR.arrow, 62);
+          ctx.scale(-1, 1); ctx.drawImage(SPR.arrow, -width / 2, -height / 2, width, height); ctx.restore();
         } else if (shot.owner === "enemy" && SPR.bow.complete && SPR.bow.naturalWidth > 0) {
           ctx.save(); ctx.translate(sx, sy - 24); ctx.rotate(Math.atan2(vy, vx));
-          ctx.scale(-1, 1); ctx.drawImage(SPR.arrow, -21, -21, 62, 62); ctx.restore();
+          const width = spriteWidth(SPR.arrow, 62), height = spriteHeight(SPR.arrow, 62);
+          ctx.scale(-1, 1); ctx.drawImage(SPR.arrow, -width / 2, -height / 2, width, height); ctx.restore();
         }
       }
     });
@@ -360,15 +374,19 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
           ctx.save(); ctx.translate(cursorX, cursorY - 3); ctx.rotate(Math.atan2(fy, fx));
           ctx.scale(-1, 1);
           const cursorSize = 50;
-          const cursorAspect = SPR.attackCursor.naturalWidth / SPR.attackCursor.naturalHeight;
-          const cursorWidth = cursorSize * cursorAspect;
-          ctx.drawImage(SPR.attackCursor, -cursorWidth / 2, -cursorSize / 2, cursorWidth, cursorSize); ctx.restore();
+          const cursorWidth = spriteWidth(SPR.attackCursor, cursorSize);
+          const cursorHeight = spriteHeight(SPR.attackCursor, cursorSize);
+          ctx.drawImage(SPR.attackCursor, -cursorWidth / 2, -cursorHeight / 2, cursorWidth, cursorHeight); ctx.restore();
         }
         ctx.restore();
         const [hx] = [(p.fx - p.fy)];
         ctx.save(); ctx.translate(sx, sy + 4); if (hx < -0.05) ctx.scale(-1, 1);
         const heroSprite = p.weapon === "bow" ? SPR.heroRanged : p.atk > 0 ? SPR.heroAttack : SPR.hero;
-        if (heroSprite.complete && heroSprite.naturalWidth > 0) ctx.drawImage(heroSprite, -38, -76, 76, 76); ctx.restore();
+        if (heroSprite.complete && heroSprite.naturalWidth > 0) {
+          const width = spriteWidth(heroSprite, 76), height = spriteHeight(heroSprite, 76);
+          ctx.drawImage(heroSprite, -width / 2, -height, width, height);
+        }
+        ctx.restore();
         if (p.weapon === "melee" && p.atk > 0) {
           ctx.strokeStyle = "rgba(255,240,200,0.7)"; ctx.lineWidth = 3; const a = Math.atan2(fy, fx); ctx.beginPath(); ctx.arc(sx, sy - 20, 40, a - 0.9, a + 0.9); ctx.stroke(); ctx.lineWidth = 1;
         }
