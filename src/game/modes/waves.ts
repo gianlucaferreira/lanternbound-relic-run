@@ -20,7 +20,7 @@ export function spawnWave(room: Room, wave: number, rnd: RandomBetween, say: (me
   const count = Math.min(3 + Math.floor(wave * 0.8), 18);
   for (let i = 0; i < count; i++) {
     const bat = Math.random() < 0.35;
-    const hp = (bat ? 2 : 4) + Math.floor((wave - 1) / 10);
+    const hp = (bat ? 2 : 4) + Math.floor(wave / 10);
     const [cornerX, cornerY] = corners[i % corners.length]!;
     const x = bat ? rnd(2.2, 8.8) : cornerX + rnd(-0.35, 0.35);
     const y = bat ? rnd(2.2, 8.8) : cornerY + rnd(-0.35, 0.35);
@@ -36,7 +36,6 @@ export function completeWave(room: Room, state: WaveState, say: (message: string
   const buffs = state.wave % 10 === 0 ? 2 : 1 + (state.wave % 5 === 0 ? 1 : 0);
   const buffKinds: Item["kind"][] = ["heart", "sword", "boots", "bow"];
   for (let i = 0; i < buffs; i++) room.items.push({ x: 4 + i * 1.2, y: 6.5, kind: buffKinds[Math.floor(Math.random() * buffKinds.length)]! });
-  if (state.wave === 3) room.items.push({ x: 5.5, y: 7.5, kind: "bow" });
   state.waveBreak = 10;
   say(`Onda ${state.wave} concluída! Recolha os itens. Próxima onda em breve...`);
 }

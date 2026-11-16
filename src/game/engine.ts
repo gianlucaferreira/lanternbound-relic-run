@@ -13,6 +13,8 @@ import bootsItemSrc from "@/assets/sprite-boots.png";
 import relicItemSrc from "@/assets/sprite-cafe.png";
 import attackCursorSrc from "@/assets/sprite-attack-cursor.png";
 import heroAttackSrc from "@/assets/hero-attack.png";
+import projectileSrc from "@/assets/projetil-dourado.webp";
+
 import type { Enemy, HUD, Item, Projectile, Room, GameMode } from "./types";
 import { completeDungeonRoom, generateDungeon } from "./modes/dungeon";
 import { completeWave, spawnWave } from "./modes/waves";
@@ -41,6 +43,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     boss: mkImg(bossSrc),
     bow: mkImg(bowSrc),
     arrow: mkImg(arrowSrc),
+    projectile: mkImg(projectileSrc),
     potion: mkImg(potionSrc),
     heartItem: mkImg(heartItemSrc),
     swordItem: mkImg(swordItemSrc),
@@ -76,7 +79,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     return { gx, gy, enemies, items: [], cleared: kind === "start", visited: kind === "start", kind };
   }
 
-  const p = { x: 5.5, y: 5.5, hp: 6, maxHp: 6, dmg: 1, spd: 3.2, fx: 0, fy: 1, atk: 0, cd: 0, inv: 0, weapon: "melee" as "melee" | "bow", hasBow: false };
+  const p = { x: 5.5, y: 5.5, hp: 6, maxHp: 6, dmg: 1, spd: 3.2, fx: 0, fy: 1, atk: 0, cd: 0, inv: 0, weapon: (mode === "waves" ? "bow" : "melee") as "melee" | "bow", hasBow: mode === "waves" };
   const projectiles: Projectile[] = [];
   let room = rooms.get(key(0, 0))!;
   let wave = mode === "waves" ? 1 : 0;
@@ -373,10 +376,10 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
           ctx.save(); ctx.translate(sx, sy - 40); ctx.rotate(Math.atan2(vy, vx));
           const width = spriteWidth(SPR.arrow, 62), height = spriteHeight(SPR.arrow, 62);
           ctx.scale(-1, 1); ctx.drawImage(SPR.arrow, -width / 2, -height / 2, width, height); ctx.restore();
-        } else if (shot.owner === "enemy" && SPR.bow.complete && SPR.bow.naturalWidth > 0) {
+        } else if (shot.owner === "enemy" && SPR.projectile.complete && SPR.projectile.naturalWidth > 0) {
           ctx.save(); ctx.translate(sx, sy - 24); ctx.rotate(Math.atan2(vy, vx));
-          const width = spriteWidth(SPR.arrow, 62), height = spriteHeight(SPR.arrow, 62);
-          ctx.scale(-1, 1); ctx.drawImage(SPR.arrow, -width / 2, -height / 2, width, height); ctx.restore();
+          const width = spriteWidth(SPR.projectile, 48), height = spriteHeight(SPR.projectile, 48);
+          ctx.scale(-1, 1); ctx.drawImage(SPR.projectile, -width / 2, -height / 2, width, height); ctx.restore();
         }
       }
     });
