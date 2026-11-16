@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { startGame, type GameMode, type HUD } from "@/game/engine";
 import potionSrc from "@/assets/sprite-potion.png";
 import potionEmptySrc from "@/assets/sprite-potion-empty.png";
+import { CHARACTERS, awardCharacterXp, getCharacterProgress, getSelectedCharacterId } from "@/game/characters";
 
 export function GamePage({ mode }: { mode: GameMode }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -10,14 +11,16 @@ export function GamePage({ mode }: { mode: GameMode }) {
   const [hud, setHud] = useState<HUD | null>(null);
   const [paused, setPaused] = useState(false);
   const [run, setRun] = useState(0);
+  const [characterId] = useState(getSelectedCharacterId);
+  const character = CHARACTERS.find((candidate) => candidate.id === characterId) ?? CHARACTERS[0]!;
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!ref.current) return;
     setHud(null);
     setPaused(false);
-    return startGame(ref.current, setHud, mode, setPaused, (skip) => { skipWaveRef.current = skip; });
-  }, [run, mode]);
+    return startGame(ref.current, setHud, mode, setPaused, (skip) => { skipWaveRef.current = skip; }, character, getCharacterProgress(character.id), () => { awardCharacterXp(character.id); });
+  }, [run, mode, character]);
 
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-background text-foreground">
@@ -25,6 +28,7 @@ export function GamePage({ mode }: { mode: GameMode }) {
       <div className="pointer-events-none absolute left-5 top-4 space-y-2">
         {hud && <div className="flex space-x-2 items-center">{Array.from({ length: hud.maxHp }).map((_, i) => <img className="h-8" key={i} src={i < hud.hp ? potionSrc : potionEmptySrc} />)}</div>}
         {hud && <p className="text-sm text-primary">Arma: {hud.weapon === "bow" ? "BESTA" : "LÂMINA"}</p>}
+        {hud && <p className="text-xs text-primary">{character.name} · NV. {getCharacterProgress(character.id).level}</p>}
       </div>
       <div className="pointer-events-none absolute right-5 top-4 space-y-2">
         {hud?.mode === "waves" && <div className="mt-2 rounded border border-primary/50 bg-background/80 px-3 py-2 text-sm text-primary"><strong>ONDA {hud.wave}</strong> · Inimigos restantes: {hud.enemiesRemaining}{hud.waveBreak > 0 && <><div className="text-xs text-muted-foreground">Próxima onda em {Math.ceil(hud.waveBreak)}s · recolha os itens</div><button type="button" onClick={() => skipWaveRef.current?.()} className="pointer-events-auto mt-2 rounded border border-primary px-3 py-1 text-xs font-semibold text-primary transition hover:bg-primary hover:text-primary-foreground">PULAR ESPERA</button></>}</div>}

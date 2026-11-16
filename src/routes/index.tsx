@@ -1,8 +1,9 @@
+import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import heroSprite from "@/assets/sprite-hero.png";
 import coffeeSprite from "@/assets/sprite-cafe.png";
-import characterImage from "@/assets/characters/Jeff.png";
-import maskSrc from "@/assets/characters/Mascara.webp";
+import maskSrc from "@/assets/characters/Mascara.webp"
+import { CHARACTERS, getCharacterProgress, getSelectedCharacterId } from "@/game/characters";
+import { CharacterSelectModal } from "@/components/CharacterSelectModal";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -20,6 +21,11 @@ export const Route = createFileRoute("/")({
 
 function Menu() {
   const navigate = useNavigate();
+  const [selectedId, setSelectedId] = useState(CHARACTERS[0]!.id);
+  const [selecting, setSelecting] = useState(false);
+  useEffect(() => setSelectedId(getSelectedCharacterId()), []);
+  const character = CHARACTERS.find((candidate) => candidate.id === selectedId) ?? CHARACTERS[0]!;
+  const progress = getCharacterProgress(character.id);
 
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-background text-foreground">
@@ -39,11 +45,11 @@ function Menu() {
 
         <div className="menu-content">
           <aside className="hero-card">
-            <div className="hero-card-top"><span>EXPLORADOR</span><span className="hero-level">LV. 01</span></div>
-            <div className="hero-stage"><div className="hero-glow" /><img src={characterImage} alt="Herói da aventura" /></div>
-            <p className="hero-name">JEFF JONES</p>
+            <div className="hero-card-top"><span>{character.title}</span><span className="hero-level">LV. {String(progress.level).padStart(2, "0")}</span></div>
+            <div className="hero-stage"><div className="hero-glow" /><img src={character.portrait} alt={character.name} /></div>
+            <p className="hero-name">{character.name}</p>
             {/* <div className="hero-stats"><span>♥ ♥ ♥ ♥ ♥ ♥</span><small>PRONTO PARA A JORNADA</small></div> */}
-            <button className="menu-ghost-button" disabled aria-disabled="true">TROCAR PERSONAGEM <span>⌁</span></button>
+            <button className="menu-ghost-button" onClick={() => setSelecting(true)}>TROCAR PERSONAGEM <span>⌁</span></button>
           </aside>
 
           <nav className="menu-actions" aria-label="Menu principal">
@@ -72,6 +78,7 @@ function Menu() {
         </div>
         <footer className="menu-bottom"><span>PROJECT SHUDARGA</span><span>V. 1.0</span></footer>
       </section>
+      {selecting && <CharacterSelectModal currentId={selectedId} onClose={() => setSelecting(false)} onSelect={setSelectedId} />}
     </main>
   );
 }

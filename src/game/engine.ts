@@ -14,6 +14,9 @@ import relicItemSrc from "@/assets/sprite-cafe.png";
 import attackCursorSrc from "@/assets/sprite-attack-cursor.png";
 import heroAttackSrc from "@/assets/hero-attack.png";
 import projectileSrc from "@/assets/projetil-dourado.webp";
+import kayaMeleeSrc from "@/assets/characters/Kaya-Foice.webp";
+import kayaRangedSrc from "@/assets/characters/Kaya-Pistola.webp";
+import type { CharacterDefinition, CharacterProgress } from "./characters";
 
 import type { Enemy, HUD, Item, Projectile, Room, GameMode } from "./types";
 import { completeDungeonRoom, generateDungeon } from "./modes/dungeon";
@@ -31,13 +34,15 @@ const DIRS: [number, number][] = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 const HEAL_DROP_CHANCE = 0.25;
 const HEAL_AMOUNT = 2;
 
-export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mode: GameMode = "dungeon", onPause?: (paused: boolean) => void, onSkipWave?: (skip: () => void) => void) {
+export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mode: GameMode = "dungeon", onPause?: (paused: boolean) => void, onSkipWave?: (skip: () => void) => void, character?: CharacterDefinition, progress?: CharacterProgress, onProgress?: () => void) {
   const mkImg = (src: string) => { const image = new Image(); image.src = src; return image; };
   const SPR = {
     hero: mkImg(heroSrc),
     // Placeholder attack pose: replace this source when the dedicated asset is ready.
     heroAttack: mkImg(heroAttackSrc),
     heroRanged: mkImg(rangedHeroSrc),
+    kayaMelee: mkImg(kayaMeleeSrc),
+    kayaRanged: mkImg(kayaRangedSrc),
     slime: mkImg(slimeSrc),
     bat: mkImg(batSrc),
     boss: mkImg(bossSrc),
@@ -79,7 +84,9 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     return { gx, gy, enemies, items: [], cleared: kind === "start", visited: kind === "start", kind };
   }
 
-  const p = { x: 5.5, y: 5.5, hp: 6, maxHp: 6, dmg: 1, spd: 3.2, fx: 0, fy: 1, atk: 0, cd: 0, inv: 0, weapon: (mode === "waves" ? "bow" : "melee") as "melee" | "bow", hasBow: mode === "waves" };
+  const characterWeapon = character?.weapon ?? (mode === "waves" ? "bow" : "melee");
+  const characterLevel = progress?.level ?? 1;
+  const p = { x: 5.5, y: 5.5, hp: 6 + Math.floor((characterLevel - 1) / 2), maxHp: 6 + Math.floor((characterLevel - 1) / 2), dmg: 1 + Math.floor((characterLevel - 1) / 3), spd: 3.2, fx: 0, fy: 1, atk: 0, cd: 0, inv: 0, weapon: characterWeapon as "melee" | "bow", hasBow: characterWeapon === "bow" };
   const projectiles: Projectile[] = [];
   let room = rooms.get(key(0, 0))!;
   let wave = mode === "waves" ? 1 : 0;
@@ -139,8 +146,9 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     for (const enemy of room.enemies) {
       if (enemy.hp > 0) {
         survivors.push(enemy);
-      } else if (Math.random() < (mode === "waves" ? 0.1 : HEAL_DROP_CHANCE)) {
-        room.items.push({ x: enemy.x, y: enemy.y, kind: "potion" });
+      } else {
+        onProgress?.();
+        if (Math.random() < (mode === "waves" ? 0.1 : HEAL_DROP_CHANCE)) room.items.push({ x: enemy.x, y: enemy.y, kind: "potion" });
       }
     }
     room.enemies = survivors;
@@ -401,7 +409,9 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         ctx.restore();
         const [hx] = [(p.fx - p.fy)];
         ctx.save(); ctx.translate(sx, sy + 4); if (hx < -0.05) ctx.scale(-1, 1);
-        const heroSprite = p.weapon === "bow" ? SPR.heroRanged : p.atk > 0 ? SPR.heroAttack : SPR.hero;
+        const heroSprite = character?.sprite === "kaya"
+          ? (p.weapon === "bow" ? SPR.kayaRanged : p.atk > 0 ? SPR.kayaMelee : SPR.kayaMelee)
+          : p.weapon === "bow" ? SPR.heroRanged : p.atk > 0 ? SPR.heroAttack : SPR.hero;
         if (heroSprite.complete && heroSprite.naturalWidth > 0) {
           const width = spriteWidth(heroSprite, 76), height = spriteHeight(heroSprite, 76);
           ctx.drawImage(heroSprite, -width / 2, -height, width, height);
