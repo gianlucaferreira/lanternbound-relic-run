@@ -29,7 +29,7 @@ const DIRS: [number, number][] = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 const HEAL_DROP_CHANCE = 0.25;
 const HEAL_AMOUNT = 2;
 
-export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mode: GameMode = "dungeon") {
+export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mode: GameMode = "dungeon", onPause?: (paused: boolean) => void, onSkipWave?: (skip: () => void) => void) {
   const mkImg = (src: string) => { const image = new Image(); image.src = src; return image; };
   const SPR = {
     hero: mkImg(heroSrc),
@@ -85,10 +85,27 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
   let msgT = 4;
   if (mode === "waves") spawnWave(room, wave, rnd, say);
   let status: HUD["status"] = "play";
+  let paused = false;
+  onSkipWave?.(() => {
+    if (mode !== "waves" || waveBreak <= 0 || status !== "play" || paused) return;
+    waveBreak = 0;
+    wave += 1;
+    spawnWave(room, wave, rnd, say);
+  });
   const keys = new Set<string>();
   const gameKeys = new Set(["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "q", " "]);
   const kd = (e: KeyboardEvent) => {
     const k = e.key.toLowerCase();
+    if (k === "escape" && status === "play") {
+      e.preventDefault();
+      if (!e.repeat) {
+        paused = !paused;
+        keys.clear();
+        onPause?.(paused);
+      }
+      return;
+    }
+    if (paused) return;
     if (!gameKeys.has(k)) {
       if (k === "tab") e.preventDefault();
       return;
@@ -407,7 +424,8 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
   let last = performance.now(), raf = 0, hudT = 0;
   const loop = (t: number) => {
     const dt = Math.min((t - last) / 1000, 0.05); last = t;
-    update(dt); render(t);
+    if (!paused) update(dt);
+    render(t);
     hudT -= dt;
     if (hudT <= 0) { hudT = 0.1; onHud({ hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, rooms: xsVisited(), total: rooms.size, weapon: p.weapon, hasBow: p.hasBow, status, msg, mode, wave, enemiesRemaining: room.enemies.length, waveBreak }); }
     raf = requestAnimationFrame(loop);

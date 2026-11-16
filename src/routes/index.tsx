@@ -2,6 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import heroSprite from "@/assets/sprite-hero.png";
 import coffeeSprite from "@/assets/sprite-cafe.png";
 import characterImage from "@/assets/characters/Jeff.png";
+import maskSrc from "@/assets/characters/Mascara.webp";
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -29,7 +31,7 @@ function Menu() {
           </div>
           <button className="menu-coffee waves-menu-button" aria-label="Iniciar modo Waves" onClick={() => navigate({ to: "/waves" })}>
             <span className="coffee-spark spark-one">✧</span>
-            <img src={coffeeSprite} alt="" />
+            <img src={maskSrc} alt="" />
             <span className="waves-menu-label">WAVES</span>
             <span className="coffee-spark spark-two">✦</span>
           </button>
