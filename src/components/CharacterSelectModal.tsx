@@ -26,7 +26,7 @@ export function CharacterSelectModal({ currentId, onClose, onSelect }: { current
       <p className="mt-1 text-sm text-muted-foreground">Arma: {character.weaponLabel} · Nível {progress.level}</p>
       <p className="mt-1 text-xs text-muted-foreground">Experiência: {progress.xp}/10 · Derrote inimigos para evoluir</p>
       <div className="mt-5 flex justify-center gap-1" aria-label={`Personagem ${index + 1} de ${CHARACTERS.length}`}>{CHARACTERS.map((item, itemIndex) => <span key={item.id} className={`h-1.5 w-6 rounded-full ${itemIndex === index ? "bg-primary" : "bg-muted"}`} />)}</div>
-      <button onClick={choose} className="mt-6 w-full rounded-md border border-primary px-6 py-3 font-sans tracking-widest text-primary transition hover:bg-primary hover:text-primary-foreground">SELECIONAR PERSONAGEM</button>
+      {character.id === "kaya" ? <button disabled onClick={choose} className="mt-6 w-full rounded-md border border-primary px-6 py-3 font-sans tracking-widest text-primary transition hover:bg-primary/80 hover:text-primary-foreground cursor-not-allowed">EM BREVE</button> : <button onClick={choose} className="mt-6 w-full rounded-md border border-primary px-6 py-3 font-sans tracking-widest text-primary transition hover:bg-primary hover:text-primary-foreground">SELECIONAR PERSONAGEM</button>}
     </section>
   </div>;
 }
