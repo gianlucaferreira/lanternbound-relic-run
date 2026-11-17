@@ -1,11 +1,25 @@
 import jeffPortrait from "@/assets/characters/Jeff.png";
 import kayaPortrait from "@/assets/characters/Kaya.png";
+import josiasPortrait from "@/assets/characters/Josias-po.png";
+import zhaoPortrait from "@/assets/characters/Zhao.png";
+import kairoPortrait from "@/assets/characters/Kairo.png";
+import misterPortrait from "@/assets/characters/Mister.png";
+import ayamePortrait from "@/assets/characters/Ayame.png";
+
 import jeffSprite from "@/assets/sprite-hero.png";
 import jeffAttackSprite from "@/assets/hero-attack.png";
 import jeffRangedSprite from "@/assets/sprite-hero-ranged.png";
 import kayaMeleeSprite from "@/assets/characters/Kaya-Foice.png";
 import kayaAttackSprite from "@/assets/characters/Kaya-Foice-2.png";
 import kayaRangedSprite from "@/assets/characters/Kaya-Pistola.png";
+
+import josiasSprite from "@/assets/characters/Josias.png";
+import josiasAttackSprite from "@/assets/characters/Josias-2.png";
+import josiasRangedSprite from "@/assets/characters/Josias-Martelo.png";
+import josiasRangedAttackSprite from "@/assets/characters/Josias-Martelo-2.png";
+
+
+
 import slimeSprite from "@/assets/sprite-slime.png";
 import batSprite from "@/assets/sprite-bat.png";
 import bossSprite from "@/assets/sprite-boss.png";
@@ -15,7 +29,7 @@ import silverProjectileSprite from "@/assets/projetil-prata.webp";
 import goldenProjectileSprite from "@/assets/projetil-dourado.webp";
 
 export type WeaponKind = "melee" | "bow";
-export type CharacterId = "jeff" | "kaya";
+export type CharacterId = "jeff" | "kaya" | "josias" | 'zhao' | 'kairo' | 'mister' | 'ayame';
 export type EnemyId = "slime" | "bat" | "boss";
 export type CharacterDefinition = {
   id: CharacterId;
@@ -24,9 +38,10 @@ export type CharacterDefinition = {
   weapon: WeaponKind;
   weaponLabels: Record<WeaponKind, string>;
   portrait: string;
+  available: boolean,
   playable: boolean;
   stats: { hp: number; damage: number; speed: number };
-  sprites: { melee: string; ranged: string; attack: string, projectile: string };
+  sprites: { melee: string; ranged: string; attack: string, rangedAttack?: string, projectile: string };
 };
 export type CharacterProgress = { level: number; xp: number };
 export type EnemyDefinition = {
@@ -48,9 +63,17 @@ export const WEAPONS: Record<WeaponKind, { id: WeaponKind; name: string; label: 
 };
 
 export const CHARACTERS: CharacterDefinition[] = [
-  { id: "jeff", name: "JEFF JONES", title: "EXPLORADOR", weapon: "melee", weaponLabels: { melee: "LÂMINA", bow: "BESTA" }, portrait: jeffPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: jeffSprite, ranged: jeffRangedSprite, attack: jeffAttackSprite, projectile: '' } },
-  { id: "kaya", name: "KAYA BRYON", title: "INVENTORA", weapon: "bow", weaponLabels: { melee: "FOICE", bow: "REVÓLVER" }, portrait: kayaPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: kayaMeleeSprite, ranged: kayaRangedSprite, attack: kayaAttackSprite, projectile: '' } },
+  { id: "jeff", available: true, name: "JEFF JONES", title: "EXPLORADOR", weapon: "melee", weaponLabels: { melee: "LÂMINA", bow: "BESTA" }, portrait: jeffPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: jeffSprite, ranged: jeffRangedSprite, attack: jeffAttackSprite, projectile: '' } },
+  { id: "kaya", available: true, name: "KAYA BRYON", title: "INVENTORA", weapon: "bow", weaponLabels: { melee: "FOICE", bow: "REVÓLVER" }, portrait: kayaPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: kayaMeleeSprite, ranged: kayaRangedSprite, attack: kayaAttackSprite, projectile: '' } },
+  { id: "josias", available: true, name: "JOSIAS ESCARIOTES", title: "LUTADOR", weapon: "melee", weaponLabels: { melee: "SOCO", bow: "MARTELO" }, portrait: josiasPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: josiasSprite, ranged: josiasRangedSprite, attack: josiasAttackSprite, rangedAttack: josiasRangedAttackSprite, projectile: '' } },
+
+
+  { id: 'zhao', available: false, name: 'ZHAO YING YUE', title: "REPORTER", weapon: 'melee', weaponLabels: { melee: 'CALMA', bow: 'CALMA' }, portrait: zhaoPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: josiasSprite, ranged: josiasRangedSprite, attack: josiasAttackSprite, projectile: '' } },
+  { id: 'kairo', available: false, name: 'KAIRO HENRIQUE ARMANDO FILHO', title: "PROGRAMADOR", weapon: 'melee', weaponLabels: { melee: 'CALMA', bow: 'CALMA' }, portrait: kairoPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: josiasSprite, ranged: josiasRangedSprite, attack: josiasAttackSprite, projectile: '' } },
+  { id: 'mister', available: false, name: 'MISTER M', title: "ILUSIONISTA", weapon: 'melee', weaponLabels: { melee: 'CALMA', bow: 'CALMA' }, portrait: misterPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: josiasSprite, ranged: josiasRangedSprite, attack: josiasAttackSprite, projectile: '' } },
+  { id: 'ayame', available: false, name: 'AYAME KURENAI', title: "ARTISTA", weapon: 'bow', weaponLabels: { melee: 'CALMA', bow: 'CALMA' }, portrait: ayamePortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: josiasSprite, ranged: josiasRangedSprite, attack: josiasAttackSprite, projectile: '' } },
 ];
+
 
 export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
   slime: { id: "slime", name: "Slime", sprite: slimeSprite, hp: 4, speed: 0.65, radius: 0.33, ranged: false, contactDamage: 1 },

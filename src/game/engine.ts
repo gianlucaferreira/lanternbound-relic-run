@@ -3,12 +3,16 @@ import potionSrc from "@/assets/sprite-potion.png";
 import heartItemSrc from "@/assets/sprite-heart.png";
 import swordItemSrc from "@/assets/sprite-sword.png";
 import scytheItemSrc from "@/assets/sprite-foice.png";
+import brassKnucklesItemSrc from "@/assets/sprite-soco-ingles.png";
+import hammerItemSrc from "@/assets/sprite-martelo.png";
 import revolverItemSrc from "@/assets/sprite-revolver.png";
 import bootsItemSrc from "@/assets/sprite-boots.png";
 import relicItemSrc from "@/assets/sprite-cafe.png";
+import guizoItemSrc from "@/assets/Guizo.png";
 import attackCursorSrc from "@/assets/sprite-attack-cursor.png";
 import swordSlashFrameOneSrc from "@/assets/sprite-corte.png";
 import swordSlashFrameTwoSrc from "@/assets/sprite-corte-2.png";
+import punchLineSrc from "@/assets/sprite-soco.png";
 import { CHARACTER_SPRITES, CHARACTERS, ENEMIES, WEAPONS, createCharacterState, createEnemy, getCharacterSprite, type CharacterDefinition, type CharacterProgress } from "./characters";
 
 import type { Enemy, HUD, Item, Projectile, Room, GameMode } from "./types";
@@ -27,6 +31,8 @@ const spriteHeight = (image: HTMLImageElement, size: number) => size * image.nat
 const DIRS: [number, number][] = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 const HEAL_DROP_CHANCE = 0.25;
 const HEAL_AMOUNT = 1;
+const GUIZO_DROP_CHANCE = 0.025;
+const GUIZO_INVINCIBILITY_DURATION = 5;
 
 export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mode: GameMode = "dungeon", onPause?: (paused: boolean) => void, onSkipWave?: (skip: () => void) => void, character?: CharacterDefinition, progress?: CharacterProgress, onProgress?: () => void) {
   const mkImg = (src: string) => { const image = new Image(); image.src = src; return image; };
@@ -35,6 +41,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     hero: mkImg(selectedCharacter.sprites.melee),
     heroAttack: mkImg(selectedCharacter.sprites.attack),
     heroRanged: mkImg(selectedCharacter.sprites.ranged),
+    heroRangedAttack: selectedCharacter.sprites.rangedAttack ? mkImg(selectedCharacter.sprites.rangedAttack) : mkImg(selectedCharacter.sprites.ranged),
     slime: mkImg(ENEMIES.slime.sprite),
     bat: mkImg(ENEMIES.bat.sprite),
     boss: mkImg(ENEMIES.boss.sprite),
@@ -44,16 +51,19 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     heartItem: mkImg(heartItemSrc),
     bootsItem: mkImg(bootsItemSrc),
     relicItem: mkImg(relicItemSrc),
+    guizoItem: mkImg(guizoItemSrc),
     attackCursor: mkImg(attackCursorSrc),
     swordSlashFrames: [mkImg(swordSlashFrameOneSrc), mkImg(swordSlashFrameTwoSrc)],
+    punchLine: mkImg(punchLineSrc),
   };
   const ITEM_SPRITES: Record<Item["kind"], HTMLImageElement> = {
     heart: SPR.heartItem,
-    sword: mkImg(selectedCharacter.id === "kaya" ? scytheItemSrc : swordItemSrc),
+    sword: mkImg(selectedCharacter.id === "kaya" ? scytheItemSrc : selectedCharacter.id === "josias" ? brassKnucklesItemSrc : swordItemSrc),
     boots: SPR.bootsItem,
-    bow: mkImg(selectedCharacter.id === "kaya" ? revolverItemSrc : WEAPONS.bow.sprite),
+    bow: mkImg(selectedCharacter.id === "kaya" ? revolverItemSrc : selectedCharacter.id === "josias" ? hammerItemSrc : WEAPONS.bow.sprite),
     potion: SPR.potion,
     relic: SPR.relicItem,
+    guizo: SPR.guizoItem,
   };
   const ctx = canvas.getContext("2d")!;
   const rooms = new Map<string, Room>();
@@ -148,6 +158,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       } else {
         onProgress?.();
         if (Math.random() < (mode === "waves" ? 0.1 : HEAL_DROP_CHANCE)) room.items.push({ x: enemy.x, y: enemy.y, kind: "potion" });
+        if (Math.random() < GUIZO_DROP_CHANCE) room.items.push({ x: enemy.x, y: enemy.y, kind: "guizo" });
       }
     }
     room.enemies = survivors;
@@ -155,16 +166,18 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
   function attack() {
     if (p.cd > 0 || status !== "play") return;
     p.atk = 0.18;
-    if (p.weapon === "bow") {
+    const isJosiasHammer = selectedCharacter.id === "josias" && p.weapon === "bow";
+    if (p.weapon === "bow" && !isJosiasHammer) {
       p.cd = 0.42;
       projectiles.push({ x: p.x + p.fx * 0.45, y: p.y + p.fy * 0.45, vx: p.fx * 10, vy: p.fy * 10, life: 1.2, owner: "player", damage: p.dmg });
       return;
     }
     p.cd = 0.35;
+    const meleeReach = isJosiasHammer ? 1.85 : selectedCharacter.id === "josias" ? 1.15 : 1.3;
     for (const e of room.enemies) {
       const hitX = e.x, hitY = e.y + (ENEMIES[e.kind].ranged ? 0.25 : 0);
       const dx = hitX - p.x, dy = hitY - p.y, d = Math.hypot(dx, dy);
-      if (d < 1.3 + e.r && (dx * p.fx + dy * p.fy) / (d || 1) > 0.2) {
+      if (d < meleeReach + e.r && (dx * p.fx + dy * p.fy) / (d || 1) > 0.2) {
         e.hp -= p.dmg; e.hit = 0.15; e.x += (dx / d) * 0.5; e.y += (dy / d) * 0.5;
       }
     }
@@ -285,6 +298,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       if (it.kind === "bow") {
         p.dmg += 1; say(`${selectedCharacter.weaponLabels.bow} reforçada! Dano +1`);
       }
+      if (it.kind === "guizo") { p.inv = Math.max(p.inv, GUIZO_INVINCIBILITY_DURATION); say("Guizo raro! Invencibilidade por 5 segundos!"); }
       if (it.kind === "relic") { status = "win"; }
       return false;
     });
@@ -351,9 +365,12 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     for (const it of room.items) list.push({
       d: it.x + it.y, draw: () => {
         const [sx, sy] = iso(it.x, it.y); const b = Math.sin(t / 250) * 4; shadow(sx, sy, 10);
-        const size = { heart: 40, sword: 48, boots: 44, bow: 56, potion: 44, relic: 56 }[it.kind];
+        const size = { heart: 40, sword: 48, boots: 44, bow: 56, potion: 44, relic: 56, guizo: 48 }[it.kind];
         if (it.kind === "relic") {
           const rg = ctx.createRadialGradient(sx, sy - 24, 2, sx, sy - 24, 40); rg.addColorStop(0, "rgba(255,220,90,0.7)"); rg.addColorStop(1, "rgba(255,220,90,0)"); ctx.fillStyle = rg; ctx.fillRect(sx - 40, sy - 64, 80, 80);
+        }
+        if (it.kind === "guizo") {
+          const rg = ctx.createRadialGradient(sx, sy - 20, 2, sx, sy - 20, 30); rg.addColorStop(0, "rgba(255,220,90,0.55)"); rg.addColorStop(1, "rgba(255,220,90,0)"); ctx.fillStyle = rg; ctx.fillRect(sx - 30, sy - 50, 60, 60);
         }
         const sprite = ITEM_SPRITES[it.kind];
         if (sprite.complete && sprite.naturalWidth > 0) {
@@ -412,13 +429,21 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
           ctx.drawImage(SPR.attackCursor, -cursorWidth / 2, -cursorHeight / 2, cursorWidth, cursorHeight);
           ctx.restore();
         }
-        // Show a short two-frame sword swing only while the melee attack is active.
-        if (p.weapon === "melee" && p.atk > 0) {
+        // Josias's punch uses a sweeping line; the hammer and other melee weapons use the shared two-frame swing.
+        const isJosiasPunch = selectedCharacter.id === "josias" && p.weapon === "melee";
+        const isMeleeAttack = p.weapon === "melee" || (selectedCharacter.id === "josias" && p.weapon === "bow");
+        if (isMeleeAttack && p.atk > 0) {
           const elapsed = 0.18 - p.atk;
-          const frame = SPR.swordSlashFrames[Math.min(1, Math.floor(elapsed / 0.09))]!;
+          const frame = isJosiasPunch ? SPR.punchLine : SPR.swordSlashFrames[Math.min(1, Math.floor(elapsed / 0.09))]!;
           if (frame.complete && frame.naturalWidth > 0) {
-            ctx.save(); ctx.translate(slashX, slashY - 10); ctx.rotate(Math.atan2(fy, fx));
-            const slashSize = 76;
+            const isJosiasHammer = selectedCharacter.id === "josias" && p.weapon === "bow";
+            const progress = Math.min(1, elapsed / 0.18);
+            const swingDistance = isJosiasPunch ? 0.34 + progress * 0.48 : isJosiasHammer ? 0.78 : 0.58;
+            const [swingX, swingY] = iso(p.x + p.fx * swingDistance, p.y + p.fy * swingDistance);
+            ctx.save();
+            ctx.translate(swingX, swingY - (isJosiasPunch ? 28 : 10));
+            ctx.rotate(Math.atan2(fy, fx));
+            const slashSize = isJosiasPunch ? 54 + progress * 10 : isJosiasHammer ? 88 : 76;
             const slashWidth = spriteWidth(frame, slashSize);
             const slashHeight = spriteHeight(frame, slashSize);
             ctx.globalAlpha = Math.min(1, p.atk / 0.07);
@@ -428,8 +453,9 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         }
         const [hx] = [(p.fx - p.fy)];
         ctx.save(); ctx.translate(sx, sy + 4); if (hx < -0.05) ctx.scale(-1, 1);
-        const heroSource = getCharacterSprite(selectedCharacter, p.weapon, p.atk > 0);
-        const heroSprite = heroSource === selectedCharacter.sprites.melee ? SPR.hero : heroSource === selectedCharacter.sprites.ranged ? SPR.heroRanged : SPR.heroAttack;
+        const isHammerAttack = selectedCharacter.id === "josias" && p.weapon === "bow" && p.atk > 0;
+        const heroSource = isHammerAttack ? selectedCharacter.sprites.rangedAttack ?? selectedCharacter.sprites.ranged : getCharacterSprite(selectedCharacter, p.weapon, p.atk > 0);
+        const heroSprite = isHammerAttack ? SPR.heroRangedAttack : heroSource === selectedCharacter.sprites.melee ? SPR.hero : heroSource === selectedCharacter.sprites.ranged ? SPR.heroRanged : SPR.heroAttack;
         if (heroSprite.complete && heroSprite.naturalWidth > 0) {
           const isKayaIdleScythe = selectedCharacter.id === "kaya" && heroSource === selectedCharacter.sprites.melee;
           const height = HERO_RENDER_HEIGHT * (isKayaIdleScythe ? 1.1 : 1);
