@@ -1,5 +1,6 @@
 import type { Room, Item } from "../types";
 import { createBoss } from "./dungeon";
+import { createEnemy } from "../characters";
 
 export type WaveState = { wave: number; waveBreak: number };
 type RandomBetween = (min: number, max: number) => number;
@@ -24,7 +25,9 @@ export function spawnWave(room: Room, wave: number, rnd: RandomBetween, say: (me
     const [cornerX, cornerY] = corners[i % corners.length]!;
     const x = bat ? rnd(2.2, 8.8) : cornerX + rnd(-0.35, 0.35);
     const y = bat ? rnd(2.2, 8.8) : cornerY + rnd(-0.35, 0.35);
-    room.enemies.push({ x, y, hp, max: hp, spd: bat ? 0 : 0.65 + wave * 0.025, r: bat ? 0.35 : 0.5, kind: bat ? "bat" : "slime", hit: 0, shotCd: bat ? rnd(0.7, 1.5) : 0, moveT: 0 });
+    const enemy = createEnemy(bat ? "bat" : "slime", x, y, { hp, spd: bat ? 0 : 0.65 + wave * 0.025 });
+    enemy.shotCd = bat ? rnd(0.7, 1.5) : 0;
+    room.enemies.push(enemy);
   }
   say(`Onda ${wave} começando!`);
 }

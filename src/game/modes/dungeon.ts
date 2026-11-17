@@ -1,4 +1,5 @@
 import type { Enemy, Room, Item } from "../types";
+import { createEnemy } from "../characters";
 
 const DIRS: [number, number][] = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 
@@ -34,16 +35,16 @@ export function generateDungeon(
   bossRoom.items = [];
 }
 
-export function completeDungeonRoom(room: Room, phase: number, say: (message: string) => void) {
-  const guaranteedBowDrop = phase === 1;
+export function completeDungeonRoom(room: Room, phase: number, say: (message: string) => void, secondaryWeapon: "sword" | "bow" = "bow", secondaryWeaponName = "besta") {
+  const guaranteedSecondaryDrop = phase === 1;
   room.cleared = true;
   if (room.kind === "boss") {
     room.items.push({ x: 5.5, y: 5.5, kind: "relic" });
-    if (guaranteedBowDrop) room.items.push({ x: 5.5, y: 5.5, kind: "bow" });
-    say(guaranteedBowDrop ? "O guardião caiu! Pegue o Café e a besta!" : "O guardião caiu! Pegue o Café!");
-  } else if (guaranteedBowDrop) {
-    room.items.push({ x: 5.5, y: 5.5, kind: "bow" });
-    say("Sala limpa! A besta garantida está no chão...");
+    if (guaranteedSecondaryDrop) room.items.push({ x: 5.5, y: 5.5, kind: secondaryWeapon });
+    say(guaranteedSecondaryDrop ? `O guardião caiu! Pegue o Café e a ${secondaryWeaponName}!` : "O guardião caiu! Pegue o Café!");
+  } else if (guaranteedSecondaryDrop) {
+    room.items.push({ x: 5.5, y: 5.5, kind: secondaryWeapon });
+    say(`Sala limpa! A ${secondaryWeaponName} garantida está no chão...`);
   } else if (Math.random() < 0.8) {
     const roll = Math.random();
     const kind: Item["kind"] = roll < 0.4 ? "heart" : roll < 0.7 ? "sword" : roll < 0.85 ? "boots" : "bow";
@@ -53,5 +54,5 @@ export function completeDungeonRoom(room: Room, phase: number, say: (message: st
 }
 
 export function createBoss(hp: number, speed: number, x: number, y: number): Enemy {
-  return { x, y, hp, max: hp, spd: speed, r: 0.5, kind: "boss", hit: 0, shotCd: 0, moveT: 0 };
+  return createEnemy("boss", x, y, { hp, spd: speed });
 }

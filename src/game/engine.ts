@@ -1,22 +1,15 @@
 // Plain TS roguelike engine: logic + isometric canvas rendering.
-import heroSrc from "@/assets/sprite-hero.png";
-import slimeSrc from "@/assets/sprite-slime.png";
-import batSrc from "@/assets/sprite-bat.png";
-import bossSrc from "@/assets/sprite-boss.png";
-import rangedHeroSrc from "@/assets/sprite-hero-ranged.png";
-import bowSrc from "@/assets/sprite-crossbow.png";
-import arrowSrc from "@/assets/sprite-arrow.png";
 import potionSrc from "@/assets/sprite-potion.png";
 import heartItemSrc from "@/assets/sprite-heart.png";
 import swordItemSrc from "@/assets/sprite-sword.png";
+import scytheItemSrc from "@/assets/sprite-foice.png";
+import revolverItemSrc from "@/assets/sprite-revolver.png";
 import bootsItemSrc from "@/assets/sprite-boots.png";
 import relicItemSrc from "@/assets/sprite-cafe.png";
 import attackCursorSrc from "@/assets/sprite-attack-cursor.png";
-import heroAttackSrc from "@/assets/hero-attack.png";
-import projectileSrc from "@/assets/projetil-dourado.webp";
-import kayaMeleeSrc from "@/assets/characters/Kaya-Foice.webp";
-import kayaRangedSrc from "@/assets/characters/Kaya-Pistola.webp";
-import type { CharacterDefinition, CharacterProgress } from "./characters";
+import swordSlashFrameOneSrc from "@/assets/sprite-corte.png";
+import swordSlashFrameTwoSrc from "@/assets/sprite-corte-2.png";
+import { CHARACTER_SPRITES, CHARACTERS, ENEMIES, WEAPONS, createCharacterState, createEnemy, getCharacterSprite, type CharacterDefinition, type CharacterProgress } from "./characters";
 
 import type { Enemy, HUD, Item, Projectile, Room, GameMode } from "./types";
 import { completeDungeonRoom, generateDungeon } from "./modes/dungeon";
@@ -28,39 +21,37 @@ const W = 11, TW = 64, TH = 32, WALL = 46;
 // Sprite PNGs were cropped to their opaque bounds from 2048x2048 canvases.
 // Keep their old on-screen footprint while preserving each crop's aspect ratio.
 const SPRITE_SOURCE_SIZE = 2048;
+const HERO_RENDER_HEIGHT = 76 * 1728 / SPRITE_SOURCE_SIZE;
 const spriteWidth = (image: HTMLImageElement, size: number) => size * image.naturalWidth / SPRITE_SOURCE_SIZE;
 const spriteHeight = (image: HTMLImageElement, size: number) => size * image.naturalHeight / SPRITE_SOURCE_SIZE;
 const DIRS: [number, number][] = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 const HEAL_DROP_CHANCE = 0.25;
-const HEAL_AMOUNT = 2;
+const HEAL_AMOUNT = 1;
 
 export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mode: GameMode = "dungeon", onPause?: (paused: boolean) => void, onSkipWave?: (skip: () => void) => void, character?: CharacterDefinition, progress?: CharacterProgress, onProgress?: () => void) {
   const mkImg = (src: string) => { const image = new Image(); image.src = src; return image; };
+  const selectedCharacter = character ?? CHARACTERS[0]!;
   const SPR = {
-    hero: mkImg(heroSrc),
-    // Placeholder attack pose: replace this source when the dedicated asset is ready.
-    heroAttack: mkImg(heroAttackSrc),
-    heroRanged: mkImg(rangedHeroSrc),
-    kayaMelee: mkImg(kayaMeleeSrc),
-    kayaRanged: mkImg(kayaRangedSrc),
-    slime: mkImg(slimeSrc),
-    bat: mkImg(batSrc),
-    boss: mkImg(bossSrc),
-    bow: mkImg(bowSrc),
-    arrow: mkImg(arrowSrc),
-    projectile: mkImg(projectileSrc),
+    hero: mkImg(selectedCharacter.sprites.melee),
+    heroAttack: mkImg(selectedCharacter.sprites.attack),
+    heroRanged: mkImg(selectedCharacter.sprites.ranged),
+    slime: mkImg(ENEMIES.slime.sprite),
+    bat: mkImg(ENEMIES.bat.sprite),
+    boss: mkImg(ENEMIES.boss.sprite),
+    playerProjectile: mkImg(selectedCharacter.id === "kaya" ? CHARACTER_SPRITES.silverProjectile : WEAPONS.bow.projectile),
+    projectile: mkImg(CHARACTER_SPRITES.goldenProjectile),
     potion: mkImg(potionSrc),
     heartItem: mkImg(heartItemSrc),
-    swordItem: mkImg(swordItemSrc),
     bootsItem: mkImg(bootsItemSrc),
     relicItem: mkImg(relicItemSrc),
     attackCursor: mkImg(attackCursorSrc),
+    swordSlashFrames: [mkImg(swordSlashFrameOneSrc), mkImg(swordSlashFrameTwoSrc)],
   };
   const ITEM_SPRITES: Record<Item["kind"], HTMLImageElement> = {
     heart: SPR.heartItem,
-    sword: SPR.swordItem,
+    sword: mkImg(selectedCharacter.id === "kaya" ? scytheItemSrc : swordItemSrc),
     boots: SPR.bootsItem,
-    bow: SPR.bow,
+    bow: mkImg(selectedCharacter.id === "kaya" ? revolverItemSrc : WEAPONS.bow.sprite),
     potion: SPR.potion,
     relic: SPR.relicItem,
   };
@@ -78,15 +69,15 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       const n = 2 + Math.floor(Math.random() * 3);
       for (let i = 0; i < n; i++) {
         const bat = Math.random() < 0.4;
-        enemies.push({ x: rnd(2, 9), y: rnd(2, 6), hp: bat ? 2 : 4, max: bat ? 2 : 4, spd: bat ? 0 : 0.65, r: bat ? 0.35 : 0.5, kind: bat ? "bat" : "slime", hit: 0, shotCd: bat ? rnd(0.7, 1.5) : 0, moveT: 0 });
+        const enemy = createEnemy(bat ? "bat" : "slime", rnd(2, 9), rnd(2, 6));
+        enemy.shotCd = bat ? rnd(0.7, 1.5) : 0;
+        enemies.push(enemy);
       }
     }
     return { gx, gy, enemies, items: [], cleared: kind === "start", visited: kind === "start", kind };
   }
 
-  const characterWeapon = character?.weapon ?? (mode === "waves" ? "bow" : "melee");
-  const characterLevel = progress?.level ?? 1;
-  const p = { x: 5.5, y: 5.5, hp: 6 + Math.floor((characterLevel - 1) / 2), maxHp: 6 + Math.floor((characterLevel - 1) / 2), dmg: 1 + Math.floor((characterLevel - 1) / 3), spd: 3.2, fx: 0, fy: 1, atk: 0, cd: 0, inv: 0, weapon: characterWeapon as "melee" | "bow", hasBow: characterWeapon === "bow" };
+  const p = { x: 5.5, y: 5.5, ...createCharacterState(selectedCharacter), fx: 0, fy: 1, atk: 0, cd: 0, inv: 0 };
   const projectiles: Projectile[] = [];
   let room = rooms.get(key(0, 0))!;
   let wave = mode === "waves" ? 1 : 0;
@@ -96,12 +87,13 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
   if (mode === "waves") spawnWave(room, wave, rnd, say);
   let status: HUD["status"] = "play";
   let paused = false;
-  onSkipWave?.(() => {
+  const skipWave = () => {
     if (mode !== "waves" || waveBreak <= 0 || status !== "play" || paused) return;
     waveBreak = 0;
     wave += 1;
     spawnWave(room, wave, rnd, say);
-  });
+  };
+  onSkipWave?.(skipWave);
   const keys = new Set<string>();
   const gameKeys = new Set(["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "q", " "]);
   const kd = (e: KeyboardEvent) => {
@@ -116,13 +108,18 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       return;
     }
     if (paused) return;
+    if (k === "t" && mode === "waves") {
+      e.preventDefault();
+      if (!e.repeat) skipWave();
+      return;
+    }
     if (!gameKeys.has(k)) {
       if (k === "tab") e.preventDefault();
       return;
     }
     e.preventDefault();
     keys.add(k);
-    if (k === "q" && !e.repeat && p.hasBow) { p.weapon = p.weapon === "melee" ? "bow" : "melee"; say(p.weapon === "bow" ? "Besta equipada!" : "Lâmina equipada!"); }
+    if (k === "q" && !e.repeat && p.hasBow) { p.weapon = p.weapon === "melee" ? "bow" : "melee"; say(`${selectedCharacter.weaponLabels[p.weapon]} equipada!`); }
     if (k === " ") attack();
   };
   const ku = (e: KeyboardEvent) => keys.delete(e.key.toLowerCase());
@@ -139,7 +136,9 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       return;
     }
     const phase = [...rooms.values()].filter((candidate) => candidate.visited).length;
-    completeDungeonRoom(room, phase, say);
+    const secondaryWeaponDrop = selectedCharacter.id === "kaya" ? "sword" : "bow";
+    const secondaryWeaponName = selectedCharacter.id === "kaya" ? "foice" : "besta";
+    completeDungeonRoom(room, phase, say, secondaryWeaponDrop, secondaryWeaponName);
   }
   function removeDefeatedEnemies() {
     const survivors: Enemy[] = [];
@@ -163,7 +162,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     }
     p.cd = 0.35;
     for (const e of room.enemies) {
-      const hitX = e.x, hitY = e.y + (e.kind === "bat" ? 0.25 : 0);
+      const hitX = e.x, hitY = e.y + (ENEMIES[e.kind].ranged ? 0.25 : 0);
       const dx = hitX - p.x, dy = hitY - p.y, d = Math.hypot(dx, dy);
       if (d < 1.3 + e.r && (dx * p.fx + dy * p.fy) / (d || 1) > 0.2) {
         e.hp -= p.dmg; e.hit = 0.15; e.x += (dx / d) * 0.5; e.y += (dy / d) * 0.5;
@@ -228,7 +227,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     for (const e of room.enemies) {
       e.hit -= dt;
       const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1;
-      if (e.kind === "bat") {
+      if (ENEMIES[e.kind].ranged) {
         e.shotCd -= dt;
         if (e.shotCd <= 0) {
           projectiles.push({ x: e.x, y: e.y, vx: (dx / d) * 4.2, vy: (dy / d) * 4.2, life: 2.5, owner: "enemy", damage: 1 });
@@ -247,7 +246,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         e.x += (dx / d) * e.spd * dt; e.y += (dy / d) * e.spd * dt;
       }
       e.x = Math.max(0.5, Math.min(W - 0.5, e.x)); e.y = Math.max(0.5, Math.min(W - 0.5, e.y));
-      if (d < e.r + 0.35) hurtPlayer(e.kind === "boss" ? 3 : 1, dx, dy);
+      if (d < e.r + 0.35) hurtPlayer(ENEMIES[e.kind].contactDamage, dx, dy);
     }
     for (let i = projectiles.length - 1; i >= 0; i--) {
       const shot = projectiles[i]!;
@@ -255,7 +254,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       let hit = false;
       if (shot.owner === "player") {
         for (const e of room.enemies) {
-          const hitX = e.x, hitY = e.y + (e.kind === "bat" ? 0.25 : 0);
+          const hitX = e.x, hitY = e.y + (ENEMIES[e.kind].ranged ? 0.25 : 0);
           if (Math.hypot(hitX - shot.x, hitY - shot.y) > e.r + 0.2) continue;
           e.hp -= shot.damage; e.hit = 0.15;
           const distance = Math.hypot(shot.vx, shot.vy) || 1;
@@ -274,12 +273,11 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       if (Math.hypot(it.x - p.x, it.y - p.y) > 0.6) return true;
       if (it.kind === "potion" && p.hp >= p.maxHp) return true;
       if (it.kind === "heart") { p.maxHp += 1; p.hp = p.maxHp; say("Coração! Vida máxima +1"); }
-      if (it.kind === "sword") { p.dmg += 1; say("Lâmina afiada! Dano +1"); }
+      if (it.kind === "sword") { p.dmg += 1; say(`${selectedCharacter.weaponLabels.melee} aprimorada! Dano +1`); }
       if (it.kind === "boots") { p.spd += 0.6; say("Botas ligeiras! Velocidade +"); }
       if (it.kind === "potion") { const healed = Math.min(HEAL_AMOUNT, p.maxHp - p.hp); p.hp += healed; say(`Poção! +${healed} de vida`); }
       if (it.kind === "bow") {
-        if (p.hasBow) { p.dmg += 1; say("Besta reforçada! Dano +1"); }
-        else { p.hasBow = true; p.weapon = "bow"; say("Besta equipada! Pressione Q para trocar de arma."); }
+        p.dmg += 1; say(`${selectedCharacter.weaponLabels.bow} reforçado! Dano +1`);
       }
       if (it.kind === "relic") { status = "win"; }
       return false;
@@ -380,10 +378,10 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       d: shot.x + shot.y, draw: () => {
         const [sx, sy] = iso(shot.x, shot.y);
         const [vx, vy] = [(shot.vx - shot.vy) * TW / 2, (shot.vx + shot.vy) * TH / 2];
-        if (shot.owner === "player" && SPR.arrow.complete && SPR.arrow.naturalWidth > 0) {
+        if (shot.owner === "player" && SPR.playerProjectile.complete && SPR.playerProjectile.naturalWidth > 0) {
           ctx.save(); ctx.translate(sx, sy - 40); ctx.rotate(Math.atan2(vy, vx));
-          const width = spriteWidth(SPR.arrow, 62), height = spriteHeight(SPR.arrow, 62);
-          ctx.scale(-1, 1); ctx.drawImage(SPR.arrow, -width / 2, -height / 2, width, height); ctx.restore();
+          const width = spriteWidth(SPR.playerProjectile, 62), height = spriteHeight(SPR.playerProjectile, 62);
+          ctx.scale(-1, 1); ctx.drawImage(SPR.playerProjectile, -width / 2, -height / 2, width, height); ctx.restore();
         } else if (shot.owner === "enemy" && SPR.projectile.complete && SPR.projectile.naturalWidth > 0) {
           ctx.save(); ctx.translate(sx, sy - 24); ctx.rotate(Math.atan2(vy, vx));
           const width = spriteWidth(SPR.projectile, 48), height = spriteHeight(SPR.projectile, 48);
@@ -397,39 +395,61 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         if (p.inv > 0 && Math.floor(t / 80) % 2) return;
         const [fx, fy] = [(p.fx - p.fy) * TW / 2, (p.fx + p.fy) * TH / 2];
         const [cursorX, cursorY] = iso(p.x + p.fx * 0.85, p.y + p.fy * 0.85);
-        ctx.save();
+        const [slashX, slashY] = iso(p.x + p.fx * 0.58, p.y + p.fy * 0.58);
         if (SPR.attackCursor.complete && SPR.attackCursor.naturalWidth > 0) {
           ctx.save(); ctx.translate(cursorX, cursorY - 3); ctx.rotate(Math.atan2(fy, fx));
           ctx.scale(-1, 1);
           const cursorSize = 50;
           const cursorWidth = spriteWidth(SPR.attackCursor, cursorSize);
           const cursorHeight = spriteHeight(SPR.attackCursor, cursorSize);
-          ctx.drawImage(SPR.attackCursor, -cursorWidth / 2, -cursorHeight / 2, cursorWidth, cursorHeight); ctx.restore();
+          ctx.drawImage(SPR.attackCursor, -cursorWidth / 2, -cursorHeight / 2, cursorWidth, cursorHeight);
+          ctx.restore();
         }
-        ctx.restore();
+        // Show a short two-frame sword swing only while the melee attack is active.
+        if (p.weapon === "melee" && p.atk > 0) {
+          const elapsed = 0.18 - p.atk;
+          const frame = SPR.swordSlashFrames[Math.min(1, Math.floor(elapsed / 0.09))]!;
+          if (frame.complete && frame.naturalWidth > 0) {
+            ctx.save(); ctx.translate(slashX, slashY - 10); ctx.rotate(Math.atan2(fy, fx));
+            const slashSize = 76;
+            const slashWidth = spriteWidth(frame, slashSize);
+            const slashHeight = spriteHeight(frame, slashSize);
+            ctx.globalAlpha = Math.min(1, p.atk / 0.07);
+            ctx.drawImage(frame, -slashWidth / 2, -slashHeight / 2, slashWidth, slashHeight);
+            ctx.restore();
+          }
+        }
         const [hx] = [(p.fx - p.fy)];
         ctx.save(); ctx.translate(sx, sy + 4); if (hx < -0.05) ctx.scale(-1, 1);
-        const heroSprite = character?.sprite === "kaya"
-          ? (p.weapon === "bow" ? SPR.kayaRanged : p.atk > 0 ? SPR.kayaMelee : SPR.kayaMelee)
-          : p.weapon === "bow" ? SPR.heroRanged : p.atk > 0 ? SPR.heroAttack : SPR.hero;
+        const heroSource = getCharacterSprite(selectedCharacter, p.weapon, p.atk > 0);
+        const heroSprite = heroSource === selectedCharacter.sprites.melee ? SPR.hero : heroSource === selectedCharacter.sprites.ranged ? SPR.heroRanged : SPR.heroAttack;
         if (heroSprite.complete && heroSprite.naturalWidth > 0) {
-          const width = spriteWidth(heroSprite, 76), height = spriteHeight(heroSprite, 76);
+          const height = HERO_RENDER_HEIGHT;
+          const width = height * heroSprite.naturalWidth / heroSprite.naturalHeight;
           ctx.drawImage(heroSprite, -width / 2, -height, width, height);
         }
         ctx.restore();
-        if (p.weapon === "melee" && p.atk > 0) {
-          ctx.strokeStyle = "rgba(255,240,200,0.7)"; ctx.lineWidth = 3; const a = Math.atan2(fy, fx); ctx.beginPath(); ctx.arc(sx, sy - 20, 40, a - 0.9, a + 0.9); ctx.stroke(); ctx.lineWidth = 1;
-        }
       }
     });
     list.sort((a, b) => a.d - b.d).forEach((x) => x.draw());
-    // minimap
-    const ms = 14, mx = cw - 20, my = 20;
-    const xs = [...rooms.values()]; const minX = Math.min(...xs.map((r) => r.gx)), maxX = Math.max(...xs.map((r) => r.gx)), minY = Math.min(...xs.map((r) => r.gy));
-    for (const r of xs) {
-      if (!r.visited && ![...DIRS].some(([dx, dy]) => rooms.get(key(r.gx + dx, r.gy + dy))?.visited)) continue;
-      ctx.fillStyle = r === room ? "#ffd447" : r.visited ? (r.kind === "boss" ? "#a8322d" : "#8a8494") : "#3a3640";
-      ctx.fillRect(mx - (maxX - minX + 1) * ms + (r.gx - minX) * ms, my + (r.gy - minY) * ms, ms - 3, ms - 3);
+    // The reference map is only used in dungeon mode; keep it clear of the HUD.
+    if (mode === "dungeon") {
+      const ms = 14, margin = 20, padding = 8;
+      const xs = [...rooms.values()];
+      const minX = Math.min(...xs.map((r) => r.gx)), maxX = Math.max(...xs.map((r) => r.gx));
+      const minY = Math.min(...xs.map((r) => r.gy)), maxY = Math.max(...xs.map((r) => r.gy));
+      const mapWidth = (maxX - minX + 1) * ms;
+      const mx = cw - margin - padding - mapWidth, my = margin + padding;
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.fillStyle = "rgba(8, 7, 10, 0.72)";
+      ctx.fillRect(mx - padding, my - padding, mapWidth + padding * 2, (maxY - minY + 1) * ms + padding * 2);
+      for (const r of xs) {
+        if (!r.visited && ![...DIRS].some(([dx, dy]) => rooms.get(key(r.gx + dx, r.gy + dy))?.visited)) continue;
+        ctx.fillStyle = r === room ? "#ffd447" : r.visited ? (r.kind === "boss" ? "#a8322d" : "#8a8494") : "#3a3640";
+        ctx.fillRect(mx + (r.gx - minX) * ms, my + (r.gy - minY) * ms, ms - 3, ms - 3);
+      }
+      ctx.restore();
     }
     if (msgT > 0) { ctx.globalAlpha = Math.min(1, msgT); ctx.fillStyle = "#f3e6c4"; ctx.font = "600 18px 'Cinzel', serif"; ctx.textAlign = "center"; ctx.fillText(msg, cw / 2, ch - 40); ctx.globalAlpha = 1; }
   }

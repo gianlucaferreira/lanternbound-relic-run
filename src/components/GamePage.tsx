@@ -27,14 +27,14 @@ export function GamePage({ mode }: { mode: GameMode }) {
       <canvas key={run} ref={ref} className="block h-full w-full" />
       <div className="pointer-events-none absolute left-5 top-4 space-y-2">
         {hud && <div className="flex space-x-2 items-center">{Array.from({ length: hud.maxHp }).map((_, i) => <img className="h-8" key={i} src={i < hud.hp ? potionSrc : potionEmptySrc} />)}</div>}
-        {hud && <p className="text-sm text-primary">Arma: {hud.weapon === "bow" ? "BESTA" : "LÂMINA"}</p>}
+        {hud && <p className="text-sm text-primary">Arma: {character.weaponLabels[hud.weapon]}</p>}
         {hud && <p className="text-xs text-primary">{character.name} · NV. {getCharacterProgress(character.id).level}</p>}
       </div>
       <div className="pointer-events-none absolute right-5 top-4 space-y-2">
         {hud?.mode === "waves" && <div className="mt-2 rounded border border-primary/50 bg-background/80 px-3 py-2 text-sm text-primary"><strong>ONDA {hud.wave}</strong> · Inimigos restantes: {hud.enemiesRemaining}{hud.waveBreak > 0 && <><div className="text-xs text-muted-foreground">Próxima onda em {Math.ceil(hud.waveBreak)}s · recolha os itens</div><button type="button" onClick={() => skipWaveRef.current?.()} className="pointer-events-auto mt-2 rounded border border-primary px-3 py-1 text-xs font-semibold text-primary transition hover:bg-primary hover:text-primary-foreground">PULAR ESPERA</button></>}</div>}
       </div>
       <div className="pointer-events-none absolute left-5 bottom-4 space-y-2">
-        <p className="max-w-xs bottom-0 text-xs text-muted-foreground">WASD/setas para mover · Espaço ou clique para atacar · Q alterna a arma após encontrar a besta</p>
+        <p className="max-w-xs bottom-0 text-xs text-muted-foreground">WASD/setas para mover · Espaço ou clique para atacar · Q alterna entre as armas do personagem · ESC para pausar{mode === "waves" && " · T para pular a espera entre ondas"}</p>
       </div>
       {hud && hud.status !== "play" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 bg-background/80 backdrop-blur-sm">
