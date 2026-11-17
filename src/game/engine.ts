@@ -366,10 +366,11 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       d: e.x + e.y, draw: () => {
         const [sx, sy] = iso(e.x, e.y); const s = e.r * 40;
         const lift = e.kind === "bat" ? 16 : s * 0.7 - 8;
-        shadow(sx, sy, s * 0.8);
-        const img = SPR[e.kind]; const size = e.kind === "bat" ? 80 : 76;
+        shadow(sx, sy, e.kind === "slime" ? 16 : s * 0.8);
+        const img = SPR[e.kind]; const size = e.kind === "bat" ? 80 : e.kind === "slime" ? 80 : 76;
         const flip = e.x - e.y > p.x - p.y;
-        ctx.save(); ctx.translate(sx, sy - lift + (e.kind === "bat" ? size / 2 : s * 0.7)); if (flip) ctx.scale(-1, 1);
+        const spriteY = e.kind === "bat" ? sy : sy - lift + s * 0.7;
+        ctx.save(); ctx.translate(sx, spriteY); if (flip) ctx.scale(-1, 1);
         if (e.hit > 0) ctx.filter = "brightness(3)";
         if (img.complete && img.naturalWidth > 0) {
           const width = spriteWidth(img, size), height = spriteHeight(img, size);
@@ -430,7 +431,8 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         const heroSource = getCharacterSprite(selectedCharacter, p.weapon, p.atk > 0);
         const heroSprite = heroSource === selectedCharacter.sprites.melee ? SPR.hero : heroSource === selectedCharacter.sprites.ranged ? SPR.heroRanged : SPR.heroAttack;
         if (heroSprite.complete && heroSprite.naturalWidth > 0) {
-          const height = HERO_RENDER_HEIGHT;
+          const isKayaIdleScythe = selectedCharacter.id === "kaya" && heroSource === selectedCharacter.sprites.melee;
+          const height = HERO_RENDER_HEIGHT * (isKayaIdleScythe ? 1.1 : 1);
           const width = height * heroSprite.naturalWidth / heroSprite.naturalHeight;
           ctx.drawImage(heroSprite, -width / 2, -height, width, height);
         }

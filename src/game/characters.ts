@@ -53,8 +53,8 @@ export const CHARACTERS: CharacterDefinition[] = [
 ];
 
 export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
-  slime: { id: "slime", name: "Slime", sprite: slimeSprite, hp: 4, speed: 0.65, radius: 0.5, ranged: false, contactDamage: 1 },
-  bat: { id: "bat", name: "Morcego", sprite: batSprite, hp: 2, speed: 0, radius: 0.35, ranged: true, contactDamage: 1 },
+  slime: { id: "slime", name: "Slime", sprite: slimeSprite, hp: 4, speed: 0.65, radius: 0.33, ranged: false, contactDamage: 1 },
+  bat: { id: "bat", name: "Morcego", sprite: batSprite, hp: 2, speed: 0, radius: 0.52, ranged: true, contactDamage: 1 },
   boss: { id: "boss", name: "Luke", sprite: bossSprite, hp: 30, speed: 1.7, radius: 0.5, ranged: false, contactDamage: 3 },
 };
 
