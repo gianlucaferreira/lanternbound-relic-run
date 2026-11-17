@@ -26,7 +26,7 @@ export type CharacterDefinition = {
   portrait: string;
   playable: boolean;
   stats: { hp: number; damage: number; speed: number };
-  sprites: { melee: string; ranged: string; attack: string };
+  sprites: { melee: string; ranged: string; attack: string, projectile: string };
 };
 export type CharacterProgress = { level: number; xp: number };
 export type EnemyDefinition = {
@@ -39,7 +39,7 @@ export type EnemyDefinition = {
   ranged: boolean;
   contactDamage: number;
 };
-export type CharacterState = { hp: number; maxHp: number; dmg: number; spd: number; weapon: WeaponKind; hasBow: boolean };
+export type CharacterState = { hp: number; maxHp: number; dmg: number; spd: number; weapon: WeaponKind; hasSecondaryWeapon: boolean };
 export type EnemyState = { x: number; y: number; hp: number; max: number; spd: number; r: number; kind: EnemyId; hit: number; shotCd: number; moveT: number };
 
 export const WEAPONS: Record<WeaponKind, { id: WeaponKind; name: string; label: string; sprite: string; projectile: string }> = {
@@ -48,20 +48,20 @@ export const WEAPONS: Record<WeaponKind, { id: WeaponKind; name: string; label: 
 };
 
 export const CHARACTERS: CharacterDefinition[] = [
-  { id: "jeff", name: "JEFF JONES", title: "EXPLORADOR", weapon: "melee", weaponLabels: { melee: "LÂMINA", bow: "BESTA" }, portrait: jeffPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: jeffSprite, ranged: jeffRangedSprite, attack: jeffAttackSprite } },
-  { id: "kaya", name: "KAYA BRYON", title: "INVENTORA", weapon: "bow", weaponLabels: { melee: "FOICE", bow: "REVÓLVER" }, portrait: kayaPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: kayaMeleeSprite, ranged: kayaRangedSprite, attack: kayaAttackSprite } },
+  { id: "jeff", name: "JEFF JONES", title: "EXPLORADOR", weapon: "melee", weaponLabels: { melee: "LÂMINA", bow: "BESTA" }, portrait: jeffPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: jeffSprite, ranged: jeffRangedSprite, attack: jeffAttackSprite, projectile: '' } },
+  { id: "kaya", name: "KAYA BRYON", title: "INVENTORA", weapon: "bow", weaponLabels: { melee: "FOICE", bow: "REVÓLVER" }, portrait: kayaPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: kayaMeleeSprite, ranged: kayaRangedSprite, attack: kayaAttackSprite, projectile: '' } },
 ];
 
 export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
   slime: { id: "slime", name: "Slime", sprite: slimeSprite, hp: 4, speed: 0.65, radius: 0.5, ranged: false, contactDamage: 1 },
   bat: { id: "bat", name: "Morcego", sprite: batSprite, hp: 2, speed: 0, radius: 0.35, ranged: true, contactDamage: 1 },
-  boss: { id: "boss", name: "Guardião", sprite: bossSprite, hp: 30, speed: 1.7, radius: 0.5, ranged: false, contactDamage: 3 },
+  boss: { id: "boss", name: "Luke", sprite: bossSprite, hp: 30, speed: 1.7, radius: 0.5, ranged: false, contactDamage: 3 },
 };
 
 export const CHARACTER_SPRITES = { silverProjectile: silverProjectileSprite, goldenProjectile: goldenProjectileSprite };
 
 export function createCharacterState(character: CharacterDefinition): CharacterState {
-  return { hp: character.stats.hp, maxHp: character.stats.hp, dmg: character.stats.damage, spd: character.stats.speed, weapon: character.weapon, hasBow: true };
+  return { hp: character.stats.hp, maxHp: character.stats.hp, dmg: character.stats.damage, spd: character.stats.speed, weapon: character.weapon, hasSecondaryWeapon: true };
 }
 
 export function createEnemy(id: EnemyId, x: number, y: number, overrides: Partial<Pick<EnemyState, "hp" | "spd">> = {}): EnemyState {

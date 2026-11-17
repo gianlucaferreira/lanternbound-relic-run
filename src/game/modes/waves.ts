@@ -6,13 +6,14 @@ export type WaveState = { wave: number; waveBreak: number };
 type RandomBetween = (min: number, max: number) => number;
 
 export function spawnWave(room: Room, wave: number, rnd: RandomBetween, say: (message: string) => void) {
+  const healthMultiplier = 2 ** Math.floor(wave / 10);
   room.kind = wave % 10 === 0 ? "boss" : "normal";
   room.cleared = false;
   room.enemies = [];
   room.items = [];
   const corners: [number, number][] = [[0.9, 0.9], [10.1, 0.9], [0.9, 10.1], [10.1, 10.1]];
   if (wave % 10 === 0) {
-    const hp = 30 + (wave / 10 - 1) * 12;
+    const hp = (30 + (wave / 10 - 1) * 12) * healthMultiplier;
     const [x, y] = corners[Math.floor(Math.random() * corners.length)]!;
     room.enemies.push(createBoss(hp, 1.7 + wave * 0.015, x, y));
     say(`O chefe da onda ${wave} chegou!`);
@@ -21,7 +22,7 @@ export function spawnWave(room: Room, wave: number, rnd: RandomBetween, say: (me
   const count = Math.min(3 + Math.floor(wave * 0.8), 18);
   for (let i = 0; i < count; i++) {
     const bat = Math.random() < 0.35;
-    const hp = (bat ? 2 : 4) + Math.floor(wave / 10);
+    const hp = ((bat ? 2 : 4) + Math.floor(wave / 10)) * healthMultiplier;
     const [cornerX, cornerY] = corners[i % corners.length]!;
     const x = bat ? rnd(2.2, 8.8) : cornerX + rnd(-0.35, 0.35);
     const y = bat ? rnd(2.2, 8.8) : cornerY + rnd(-0.35, 0.35);

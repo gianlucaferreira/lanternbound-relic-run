@@ -38,7 +38,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     slime: mkImg(ENEMIES.slime.sprite),
     bat: mkImg(ENEMIES.bat.sprite),
     boss: mkImg(ENEMIES.boss.sprite),
-    playerProjectile: mkImg(selectedCharacter.id === "kaya" ? CHARACTER_SPRITES.silverProjectile : WEAPONS.bow.projectile),
+    playerProjectile: mkImg(selectedCharacter.id === "kaya" ? CHARACTER_SPRITES.goldenProjectile : WEAPONS.bow.projectile),
     projectile: mkImg(CHARACTER_SPRITES.goldenProjectile),
     potion: mkImg(potionSrc),
     heartItem: mkImg(heartItemSrc),
@@ -77,7 +77,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     return { gx, gy, enemies, items: [], cleared: kind === "start", visited: kind === "start", kind };
   }
 
-  const p = { x: 5.5, y: 5.5, ...createCharacterState(selectedCharacter), fx: 0, fy: 1, atk: 0, cd: 0, inv: 0 };
+  const p = { x: 5.5, y: 5.5, ...createCharacterState(selectedCharacter), hasSecondaryWeapon: selectedCharacter.id !== "kaya" || mode !== "dungeon", fx: 0, fy: 1, atk: 0, cd: 0, inv: 0 };
   const projectiles: Projectile[] = [];
   let room = rooms.get(key(0, 0))!;
   let wave = mode === "waves" ? 1 : 0;
@@ -119,7 +119,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     }
     e.preventDefault();
     keys.add(k);
-    if (k === "q" && !e.repeat && p.hasBow) { p.weapon = p.weapon === "melee" ? "bow" : "melee"; say(`${selectedCharacter.weaponLabels[p.weapon]} equipada!`); }
+    if (k === "q" && !e.repeat && p.hasSecondaryWeapon) { p.weapon = p.weapon === "melee" ? "bow" : "melee"; say(`${selectedCharacter.weaponLabels[p.weapon]} equipada!`); }
     if (k === " ") attack();
   };
   const ku = (e: KeyboardEvent) => keys.delete(e.key.toLowerCase());
@@ -273,11 +273,17 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       if (Math.hypot(it.x - p.x, it.y - p.y) > 0.6) return true;
       if (it.kind === "potion" && p.hp >= p.maxHp) return true;
       if (it.kind === "heart") { p.maxHp += 1; p.hp = p.maxHp; say("Coração! Vida máxima +1"); }
-      if (it.kind === "sword") { p.dmg += 1; say(`${selectedCharacter.weaponLabels.melee} aprimorada! Dano +1`); }
+      if (it.kind === "sword") {
+        p.dmg += 1;
+        if (!p.hasSecondaryWeapon && selectedCharacter.id === "kaya") {
+          p.hasSecondaryWeapon = true;
+          say(`${selectedCharacter.weaponLabels.melee} desbloqueada! Pressione Q para trocar de arma.`);
+        } else say(`${selectedCharacter.weaponLabels.melee} aprimorada! Dano +1`);
+      }
       if (it.kind === "boots") { p.spd += 0.6; say("Botas ligeiras! Velocidade +"); }
       if (it.kind === "potion") { const healed = Math.min(HEAL_AMOUNT, p.maxHp - p.hp); p.hp += healed; say(`Poção! +${healed} de vida`); }
       if (it.kind === "bow") {
-        p.dmg += 1; say(`${selectedCharacter.weaponLabels.bow} reforçado! Dano +1`);
+        p.dmg += 1; say(`${selectedCharacter.weaponLabels.bow} reforçada! Dano +1`);
       }
       if (it.kind === "relic") { status = "win"; }
       return false;
@@ -460,7 +466,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     if (!paused) update(dt);
     render(t);
     hudT -= dt;
-    if (hudT <= 0) { hudT = 0.1; onHud({ hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, rooms: xsVisited(), total: rooms.size, weapon: p.weapon, hasBow: p.hasBow, status, msg, mode, wave, enemiesRemaining: room.enemies.length, waveBreak }); }
+    if (hudT <= 0) { hudT = 0.1; onHud({ hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, rooms: xsVisited(), total: rooms.size, weapon: p.weapon, hasSecondaryWeapon: p.hasSecondaryWeapon, status, msg, mode, wave, enemiesRemaining: room.enemies.length, waveBreak }); }
     raf = requestAnimationFrame(loop);
   };
   const xsVisited = () => [...rooms.values()].filter((r) => r.visited).length;
