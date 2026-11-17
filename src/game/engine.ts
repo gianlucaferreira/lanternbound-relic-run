@@ -173,13 +173,26 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       return;
     }
     p.cd = 0.35;
-    const meleeReach = isJosiasHammer ? 1.85 : selectedCharacter.id === "josias" ? 1.15 : 1.3;
+    const meleeReach = isJosiasHammer ? 1.85 : selectedCharacter.id === "kaya" ? 1.6 : selectedCharacter.id === "josias" ? 1.15 : 1.3;
+    const isJosiasPunch = selectedCharacter.id === "josias" && p.weapon === "melee";
+    const meleeDamage = p.dmg + (isJosiasPunch ? 1 : 0);
+    let punchTarget: Enemy | undefined;
+    let punchTargetDistance = Infinity;
     for (const e of room.enemies) {
       const hitX = e.x, hitY = e.y + (ENEMIES[e.kind].ranged ? 0.25 : 0);
       const dx = hitX - p.x, dy = hitY - p.y, d = Math.hypot(dx, dy);
       if (d < meleeReach + e.r && (dx * p.fx + dy * p.fy) / (d || 1) > 0.2) {
-        e.hp -= p.dmg; e.hit = 0.15; e.x += (dx / d) * 0.5; e.y += (dy / d) * 0.5;
+        if (isJosiasPunch) {
+          if (d < punchTargetDistance) { punchTarget = e; punchTargetDistance = d; }
+          continue;
+        }
+        e.hp -= meleeDamage; e.hit = 0.15; e.x += (dx / d) * 0.5; e.y += (dy / d) * 0.5;
       }
+    }
+    if (punchTarget) {
+      const dx = punchTarget.x - p.x, dy = punchTarget.y - p.y, d = Math.hypot(dx, dy) || 1;
+      punchTarget.hp -= meleeDamage; punchTarget.hit = 0.15;
+      punchTarget.x += (dx / d) * 0.5; punchTarget.y += (dy / d) * 0.5;
     }
     removeDefeatedEnemies();
     clearRoomIfNeeded();
@@ -438,7 +451,8 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
           if (frame.complete && frame.naturalWidth > 0) {
             const isJosiasHammer = selectedCharacter.id === "josias" && p.weapon === "bow";
             const progress = Math.min(1, elapsed / 0.18);
-            const swingDistance = isJosiasPunch ? 0.34 + progress * 0.48 : isJosiasHammer ? 0.78 : 0.58;
+            const josiasFacingDown = isJosiasPunch && p.fx > 0.5 && p.fy > 0.5;
+            const swingDistance = isJosiasPunch ? 0.34 + progress * 0.48 + (josiasFacingDown ? 0.55 : 0) : isJosiasHammer ? 0.78 : 0.58;
             const [swingX, swingY] = iso(p.x + p.fx * swingDistance, p.y + p.fy * swingDistance);
             ctx.save();
             ctx.translate(swingX, swingY - (isJosiasPunch ? 28 : 10));
