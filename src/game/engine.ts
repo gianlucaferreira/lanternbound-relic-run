@@ -37,6 +37,7 @@ const HEAL_AMOUNT = 1;
 const GUIZO_DROP_CHANCE = 0.025;
 const RUNA_DROP_CHANCE = 0.04;
 const RUNA_MELEE_REACH_BONUS = 0.45;
+const MAX_MELEE_REACH = 2.2;
 const BASE_DAMAGE_INVINCIBILITY_DURATION = 0.8;
 const GUIZO_DAMAGE_INVINCIBILITY_BONUS = 0.8;
 
@@ -162,6 +163,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     if (room.enemies.length || room.cleared) return;
     if (mode === "waves") {
       completeWave(room, { wave, waveBreak }, say);
+      if (Math.random() < RUNA_DROP_CHANCE) room.items.push({ x: 5.5, y: 5.5, kind: "runa" });
       waveBreak = 10;
       return;
     }
@@ -169,6 +171,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     const secondaryWeaponDrop = selectedCharacter.id === "kaya" ? "sword" : "bow";
     const secondaryWeaponName = selectedCharacter.id === "kaya" ? "foice" : selectedCharacter.id === "josias" ? "martelo" : "besta";
     completeDungeonRoom(room, phase, say, secondaryWeaponDrop, secondaryWeaponName);
+    if (Math.random() < RUNA_DROP_CHANCE) room.items.push({ x: 5.5, y: 5.5, kind: "runa" });
   }
   function removeDefeatedEnemies() {
     const survivors: Enemy[] = [];
@@ -179,7 +182,6 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         onProgress?.();
         if (Math.random() < (mode === "waves" ? 0.1 : HEAL_DROP_CHANCE)) room.items.push({ x: enemy.x, y: enemy.y, kind: "potion" });
         if (Math.random() < GUIZO_DROP_CHANCE) room.items.push({ x: enemy.x, y: enemy.y, kind: "guizo" });
-        if (Math.random() < RUNA_DROP_CHANCE) room.items.push({ x: enemy.x, y: enemy.y, kind: "runa" });
       }
     }
     room.enemies = survivors;
@@ -194,8 +196,9 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       return;
     }
     p.cd = 0.35;
-    const meleeReach = (isJosiasHammer ? 1.85 : selectedCharacter.id === "kaya" ? 1.6 : selectedCharacter.id === "josias" ? 1.15 : 1.3) + p.meleeReachBonus;
     const isJosiasPunch = selectedCharacter.id === "josias" && p.weapon === "melee";
+    const baseMeleeReach = isJosiasHammer ? 1.85 : selectedCharacter.id === "kaya" ? 1.6 : selectedCharacter.id === "josias" ? 1.15 : 1.3;
+    const meleeReach = isJosiasPunch ? baseMeleeReach + p.meleeReachBonus : Math.min(MAX_MELEE_REACH, baseMeleeReach + p.meleeReachBonus);
     const meleeDamage = p.dmg + (isJosiasPunch ? 1 : 0);
     let punchTarget: Enemy | undefined;
     let punchTargetDistance = Infinity;

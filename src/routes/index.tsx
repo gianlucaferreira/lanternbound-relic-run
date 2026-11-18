@@ -33,13 +33,16 @@ function Menu() {
         <div className="menu-grain" aria-hidden="true" />
         <header className="menu-heading">
           <div className="menu-title-wrap">
-            <h1 className="font-title text-4xl tracking-widest text-primary text-center">Project <strong className="text-red-600">Shudarga</strong> <br /> <span className="font-sans">A Quest For Coffee</span></h1>
+            <h1 className="font-title text-4xl tracking-widest text-primary text-center">Projeto <strong className="text-red-600">Shudarga</strong> <br /> <span className="font-sans">A Busca por Café</span></h1>
           </div>
-          <button className="menu-coffee waves-menu-button" aria-label="Iniciar modo Waves" onClick={() => navigate({ to: "/waves" })}>
+          <button className="menu-coffee waves-menu-button cursor-not-allowed" disabled aria-label="Iniciar modo Waves">
             <span className="coffee-spark spark-one">✧</span>
             <img src={maskSrc} alt="" />
-            <span className="waves-menu-label">WAVES</span>
-            <span className="coffee-spark spark-two">✦</span>
+            <span className="waves-menu-label">MULTIJOGADOR
+              {/* <span className="coming-soon text-xs">EM BREVE</span> */}
+            </span>
+            {/* <span className="coffee-spark spark-two">✦</span> */}
+            {/* <span className="coming-soon">EM BREVE</span> */}
           </button>
         </header>
 
@@ -57,8 +60,8 @@ function Menu() {
             <button className="menu-action primary-action" onClick={() => navigate({ to: "/jogar" })}>
               <span className="action-icon">▶</span><span>Jogar</span><span className="action-arrow">↗</span>
             </button>
-            <button className="menu-action" disabled aria-disabled="true">
-              <span className="action-icon">⚔</span><span>Multiplayer</span><span className="coming-soon">EM BREVE</span>
+            <button className="menu-action" onClick={() => navigate({ to: "/waves" })}>
+              <span className="action-icon">⚔</span><span>SOBREVIVÊNCIA</span>
             </button>
             <button className="menu-action" disabled aria-disabled="true">
               <span className="action-icon">✦</span><span>Loja</span><span className="coming-soon">EM BREVE</span>
@@ -76,7 +79,7 @@ function Menu() {
             <div className="relic-divider" />
           </aside>
         </div>
-        <footer className="menu-bottom"><span>PROJECT SHUDARGA</span><span>V. 1.0</span></footer>
+        <footer className="menu-bottom"><span>PROJETO SHUDARGA</span><span>V. 1.0</span></footer>
       </section>
       {selecting && <CharacterSelectModal currentId={selectedId} onClose={() => setSelecting(false)} onSelect={setSelectedId} />}
     </main>
