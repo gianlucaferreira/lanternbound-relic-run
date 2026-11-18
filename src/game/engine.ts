@@ -87,7 +87,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     return { gx, gy, enemies, items: [], cleared: kind === "start", visited: kind === "start", kind };
   }
 
-  const p = { x: 5.5, y: 5.5, ...createCharacterState(selectedCharacter), hasSecondaryWeapon: selectedCharacter.id !== "kaya" || mode !== "dungeon", fx: 0, fy: 1, atk: 0, cd: 0, inv: 0 };
+  const p = { x: 5.5, y: 5.5, ...createCharacterState(selectedCharacter), hasSecondaryWeapon: !["kaya", "josias"].includes(selectedCharacter.id) || mode !== "dungeon", fx: 0, fy: 1, atk: 0, cd: 0, inv: 0 };
   const projectiles: Projectile[] = [];
   let room = rooms.get(key(0, 0))!;
   let wave = mode === "waves" ? 1 : 0;
@@ -147,7 +147,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     }
     const phase = [...rooms.values()].filter((candidate) => candidate.visited).length;
     const secondaryWeaponDrop = selectedCharacter.id === "kaya" ? "sword" : "bow";
-    const secondaryWeaponName = selectedCharacter.id === "kaya" ? "foice" : "besta";
+    const secondaryWeaponName = selectedCharacter.id === "kaya" ? "foice" : selectedCharacter.id === "josias" ? "martelo" : "besta";
     completeDungeonRoom(room, phase, say, secondaryWeaponDrop, secondaryWeaponName);
   }
   function removeDefeatedEnemies() {
@@ -274,6 +274,30 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       e.x = Math.max(0.5, Math.min(W - 0.5, e.x)); e.y = Math.max(0.5, Math.min(W - 0.5, e.y));
       if (d < e.r + 0.35) hurtPlayer(ENEMIES[e.kind].contactDamage, dx, dy);
     }
+    // Keep every enemy type from occupying the same space. Resolve overlaps
+    // after movement so enemies naturally queue behind one another as they
+    // converge on the player.
+    for (let i = 0; i < room.enemies.length; i++) {
+      const a = room.enemies[i]!;
+      for (let j = i + 1; j < room.enemies.length; j++) {
+        const b = room.enemies[j]!;
+        let dx = b.x - a.x, dy = b.y - a.y;
+        let distance = Math.hypot(dx, dy);
+        const minDistance = a.r + b.r;
+        if (distance >= minDistance) continue;
+        if (distance < 0.0001) {
+          // Deterministic direction prevents coincident spawns from sticking.
+          const angle = ((i * 31 + j * 17) % 360) * Math.PI / 180;
+          dx = Math.cos(angle); dy = Math.sin(angle); distance = 1;
+        }
+        const push = (minDistance - distance) / 2;
+        const nx = dx / distance, ny = dy / distance;
+        a.x = Math.max(0.5, Math.min(W - 0.5, a.x - nx * push));
+        a.y = Math.max(0.5, Math.min(W - 0.5, a.y - ny * push));
+        b.x = Math.max(0.5, Math.min(W - 0.5, b.x + nx * push));
+        b.y = Math.max(0.5, Math.min(W - 0.5, b.y + ny * push));
+      }
+    }
     for (let i = projectiles.length - 1; i >= 0; i--) {
       const shot = projectiles[i]!;
       shot.x += shot.vx * dt; shot.y += shot.vy * dt; shot.life -= dt;
@@ -309,7 +333,12 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       if (it.kind === "boots") { p.spd += 0.6; say("Botas ligeiras! Velocidade +"); }
       if (it.kind === "potion") { const healed = Math.min(HEAL_AMOUNT, p.maxHp - p.hp); p.hp += healed; say(`Poção! +${healed} de vida`); }
       if (it.kind === "bow") {
-        p.dmg += 1; say(`${selectedCharacter.weaponLabels.bow} reforçada! Dano +1`);
+        if (!p.hasSecondaryWeapon && selectedCharacter.id === "josias") {
+          p.hasSecondaryWeapon = true;
+          say(`${selectedCharacter.weaponLabels.bow} desbloqueado! Pressione Q para trocar de arma.`);
+        } else {
+          p.dmg += 1; say(`${selectedCharacter.weaponLabels.bow} reforçada! Dano +1`);
+        }
       }
       if (it.kind === "guizo") { p.inv = Math.max(p.inv, GUIZO_INVINCIBILITY_DURATION); say("Guizo raro! Invencibilidade por 5 segundos!"); }
       if (it.kind === "relic") { status = "win"; }
@@ -365,7 +394,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     if (door(2)) mark(5.5, W); if (door(1)) mark(W, 5.5);
     // torches
     for (const [x, y] of [[2.5, 0], [8.5, 0], [0, 2.5], [0, 8.5]] as [number, number][]) {
-      const [sx, sy] = iso(x, y); const f = 0.7 + Math.sin(t / 90 + x) * 0.15;
+      const [sx, sy] = iso(x, y); const f = 0.7;
       const tg = ctx.createRadialGradient(sx, sy - 30, 2, sx, sy - 30, 60);
       tg.addColorStop(0, `rgba(255,170,70,${0.5 * f})`); tg.addColorStop(1, "rgba(255,170,70,0)");
       ctx.fillStyle = tg; ctx.fillRect(sx - 60, sy - 90, 120, 120);
