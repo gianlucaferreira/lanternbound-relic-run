@@ -8,6 +8,7 @@ import { CHARACTERS, awardCharacterXp, getCharacterProgress, getSelectedCharacte
 export function GamePage({ mode }: { mode: GameMode }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const skipWaveRef = useRef<(() => void) | null>(null);
+  const resumeRef = useRef<(() => void) | null>(null);
   const [hud, setHud] = useState<HUD | null>(null);
   const [paused, setPaused] = useState(false);
   const [run, setRun] = useState(0);
@@ -19,7 +20,7 @@ export function GamePage({ mode }: { mode: GameMode }) {
     if (!ref.current) return;
     setHud(null);
     setPaused(false);
-    return startGame(ref.current, setHud, mode, setPaused, (skip) => { skipWaveRef.current = skip; }, character, getCharacterProgress(character.id), () => { awardCharacterXp(character.id); });
+    return startGame(ref.current, setHud, mode, setPaused, (skip) => { skipWaveRef.current = skip; }, character, getCharacterProgress(character.id), () => { awardCharacterXp(character.id); }, (resume) => { resumeRef.current = resume; });
   }, [run, mode, character]);
 
   return (
@@ -39,15 +40,15 @@ export function GamePage({ mode }: { mode: GameMode }) {
       {hud && hud.status !== "play" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 bg-background/80 backdrop-blur-sm">
           <h2 className="font-sans text-5xl tracking-widest text-primary">{hud.status === "win" ? "CAFÉ FOI ENCONTRADO" : "VOCÊ CAIU"}</h2>
-          <p className="text-muted-foreground">{hud.status === "win" ? "Mas era descafeínado!" : "A masmorra muda a cada tentativa."}</p>
-          <button onClick={() => setRun((r) => r + 1)} className="rounded-md border border-primary px-6 py-2 font-sans tracking-widest text-primary transition hover:bg-primary hover:text-primary-foreground">TENTAR DE NOVO</button>
+          <p className="text-muted-foreground">{hud.status === "win" ? "Mas era descafeínado!" : hud.mode === 'dungeon' ? "A masmorra muda a cada tentativa." : ''}</p>
+          <button onClick={() => setRun((r) => r + 1)} className="rounded-md border border-primary px-6 py-2 font-sans tracking-widest text-primary transition hover:bg-primary hover:text-primary-foreground">DROGA!</button>
           <button onClick={() => navigate({ to: "/" })} className="font-sans text-sm text-muted-foreground transition hover:text-primary">VOLTAR AO MENU</button>
         </div>
       )}
       {paused && hud?.status === "play" && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 bg-background/85 p-6 text-center backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="pause-title">
           <h2 id="pause-title" className="font-sans text-5xl tracking-widest text-primary">JOGO PAUSADO</h2>
-          <button autoFocus onClick={() => setPaused(false)} className="rounded-md border border-primary px-6 py-2 font-sans tracking-widest text-primary transition hover:bg-primary hover:text-primary-foreground">CONTINUAR</button>
+          <button autoFocus onClick={() => resumeRef.current?.()} className="rounded-md border border-primary px-6 py-2 font-sans tracking-widest text-primary transition hover:bg-primary hover:text-primary-foreground">CONTINUAR</button>
           <button onClick={() => setRun((r) => r + 1)} className="rounded-md border border-primary px-6 py-2 font-sans tracking-widest text-primary transition hover:bg-primary hover:text-primary-foreground">REINICIAR JOGO</button>
           <button onClick={() => navigate({ to: "/" })} className="font-sans text-sm text-muted-foreground transition hover:text-primary">VOLTAR AO MENU</button>
         </div>

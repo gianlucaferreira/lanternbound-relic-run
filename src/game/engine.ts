@@ -32,9 +32,10 @@ const DIRS: [number, number][] = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 const HEAL_DROP_CHANCE = 0.25;
 const HEAL_AMOUNT = 1;
 const GUIZO_DROP_CHANCE = 0.025;
-const GUIZO_INVINCIBILITY_DURATION = 5;
+const BASE_DAMAGE_INVINCIBILITY_DURATION = 0.8;
+const GUIZO_DAMAGE_INVINCIBILITY_BONUS = 0.8;
 
-export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mode: GameMode = "dungeon", onPause?: (paused: boolean) => void, onSkipWave?: (skip: () => void) => void, character?: CharacterDefinition, progress?: CharacterProgress, onProgress?: () => void) {
+export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mode: GameMode = "dungeon", onPause?: (paused: boolean) => void, onSkipWave?: (skip: () => void) => void, character?: CharacterDefinition, progress?: CharacterProgress, onProgress?: () => void, onResumeReady?: (resume: () => void) => void) {
   const mkImg = (src: string) => { const image = new Image(); image.src = src; return image; };
   const selectedCharacter = character ?? CHARACTERS[0]!;
   const SPR = {
@@ -87,7 +88,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     return { gx, gy, enemies, items: [], cleared: kind === "start", visited: kind === "start", kind };
   }
 
-  const p = { x: 5.5, y: 5.5, ...createCharacterState(selectedCharacter), hasSecondaryWeapon: !["kaya", "josias"].includes(selectedCharacter.id) || mode !== "dungeon", fx: 0, fy: 1, atk: 0, cd: 0, inv: 0 };
+  const p = { x: 5.5, y: 5.5, ...createCharacterState(selectedCharacter), hasSecondaryWeapon: !["kaya", "josias"].includes(selectedCharacter.id) || mode !== "dungeon", fx: 0, fy: 1, atk: 0, cd: 0, inv: 0, damageInvDuration: BASE_DAMAGE_INVINCIBILITY_DURATION };
   const projectiles: Projectile[] = [];
   let room = rooms.get(key(0, 0))!;
   let wave = mode === "waves" ? 1 : 0;
@@ -105,6 +106,13 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
   };
   onSkipWave?.(skipWave);
   const keys = new Set<string>();
+  const resume = () => {
+    if (!paused || status !== "play") return;
+    paused = false;
+    keys.clear();
+    onPause?.(false);
+  };
+  onResumeReady?.(resume);
   const gameKeys = new Set(["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "q", " "]);
   const kd = (e: KeyboardEvent) => {
     const k = e.key.toLowerCase();
@@ -206,7 +214,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
   function hurtPlayer(damage: number, knockX: number, knockY: number) {
     if (p.inv > 0 || status !== "play") return;
     p.hp = Math.max(0, p.hp - damage);
-    p.inv = 0.8;
+    p.inv = p.damageInvDuration;
     const distance = Math.hypot(knockX, knockY) || 1;
     p.x += (knockX / distance) * 0.6;
     p.y += (knockY / distance) * 0.6;
@@ -340,7 +348,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
           p.dmg += 1; say(`${selectedCharacter.weaponLabels.bow} reforçada! Dano +1`);
         }
       }
-      if (it.kind === "guizo") { p.inv = Math.max(p.inv, GUIZO_INVINCIBILITY_DURATION); say("Guizo raro! Invencibilidade por 5 segundos!"); }
+      if (it.kind === "guizo") { p.damageInvDuration += GUIZO_DAMAGE_INVINCIBILITY_BONUS; say("Guizo raro! Invencibilidade após dano aumentada!"); }
       if (it.kind === "relic") { status = "win"; }
       return false;
     });
