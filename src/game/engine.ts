@@ -180,7 +180,11 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         survivors.push(enemy);
       } else {
         onProgress?.();
-        if (Math.random() < (mode === "waves" ? 0.1 : HEAL_DROP_CHANCE)) room.items.push({ x: enemy.x, y: enemy.y, kind: "potion" });
+        if (mode === "dungeon" && Math.random() < HEAL_DROP_CHANCE) {
+          room.items.push({ x: enemy.x, y: enemy.y, kind: "potion" });
+        } else if (mode === "waves" && Math.random() < 0.1) {
+          room.items.push({ x: enemy.x, y: enemy.y, kind: "potion" });
+        }
         if (Math.random() < GUIZO_DROP_CHANCE) room.items.push({ x: enemy.x, y: enemy.y, kind: "guizo" });
       }
     }
