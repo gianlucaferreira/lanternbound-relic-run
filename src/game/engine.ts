@@ -473,7 +473,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
             const width = spriteWidth(sprite, size), height = spriteHeight(sprite, size);
             ctx.save();
             ctx.translate(sx, sy - height / 2 + 10);
-            ctx.rotate(-5 * Math.PI / 180);
+            // ctx.rotate(-35 * Math.PI / 180);
             ctx.drawImage(sprite, -width / 2, -height / 2, width, height);
             ctx.restore();
             return;
