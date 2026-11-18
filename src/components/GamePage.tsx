@@ -3,6 +3,18 @@ import { useNavigate } from "@tanstack/react-router";
 import { startGame, type GameMode, type HUD } from "@/game/engine";
 import potionSrc from "@/assets/sprite-potion.png";
 import potionEmptySrc from "@/assets/sprite-potion-empty.png";
+import heartItemSrc from "@/assets/sprite-heart.png";
+import swordItemSrc from "@/assets/sprite-sword.png";
+import scytheItemSrc from "@/assets/sprite-foice.png";
+import brassKnucklesItemSrc from "@/assets/sprite-soco-ingles.png";
+import hammerItemSrc from "@/assets/sprite-martelo.png";
+import revolverItemSrc from "@/assets/sprite-revolver.png";
+import crossbowItemSrc from "@/assets/sprite-crossbow.png";
+import speedItemSrc from "@/assets/spirte-indicador-velocidade.png";
+import relicItemSrc from "@/assets/sprite-cafe.png";
+import guizoItemSrc from "@/assets/Guizo.png";
+import lupasItemSrc from "@/assets/lupa.png";
+
 import { CHARACTERS, awardCharacterXp, getCharacterProgress, getSelectedCharacterId } from "@/game/characters";
 
 export function GamePage({ mode }: { mode: GameMode }) {
@@ -14,6 +26,14 @@ export function GamePage({ mode }: { mode: GameMode }) {
   const [run, setRun] = useState(0);
   const [characterId] = useState(getSelectedCharacterId);
   const character = CHARACTERS.find((candidate) => candidate.id === characterId) ?? CHARACTERS[0]!;
+  const itemIcons = [
+    { kind: "heart", label: "Coração", src: heartItemSrc },
+    { kind: "sword", label: "Arma corpo a corpo", src: character.id === "kaya" ? scytheItemSrc : character.id === "josias" ? brassKnucklesItemSrc : swordItemSrc },
+    { kind: "boots", label: "Velocidade", src: speedItemSrc },
+    { kind: "bow", label: "Arma à distância", src: character.id === "kaya" ? revolverItemSrc : character.id === "josias" ? hammerItemSrc : crossbowItemSrc },
+    { kind: "guizo", label: "Guizo", src: guizoItemSrc },
+    { kind: "runa", label: "Runa", src: lupasItemSrc },
+  ] as const;
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -31,6 +51,7 @@ export function GamePage({ mode }: { mode: GameMode }) {
         {hud && <p className="text-sm text-primary">Arma: {character.weaponLabels[hud.weapon]}</p>}
         {hud && <p className="text-xs text-primary">{character.name} · NV. {getCharacterProgress(character.id).level}</p>}
       </div>
+      {hud && <CounterItens itemIcons={itemIcons} hud={hud} />}
       <div className="pointer-events-none absolute right-5 top-4 space-y-2">
         {hud?.mode === "waves" && <div className="mt-2 rounded border border-primary/50 bg-background/80 px-3 py-2 text-sm text-primary"><strong>ONDA {hud.wave}</strong> · Inimigos restantes: {hud.enemiesRemaining}{hud.waveBreak > 0 && <><div className="text-xs text-muted-foreground">Próxima onda em {Math.ceil(hud.waveBreak)}s · recolha os itens</div><button type="button" onClick={() => skipWaveRef.current?.()} className="pointer-events-auto mt-2 rounded border border-primary px-3 py-1 text-xs font-semibold text-primary transition hover:bg-primary hover:text-primary-foreground">PULAR ESPERA</button></>}</div>}
       </div>
@@ -40,9 +61,10 @@ export function GamePage({ mode }: { mode: GameMode }) {
       {hud && hud.status !== "play" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 bg-background/80 backdrop-blur-sm">
           <h2 className="font-sans text-5xl tracking-widest text-primary">{hud.status === "win" ? "CAFÉ FOI ENCONTRADO" : "VOCÊ CAIU"}</h2>
-          <p className="text-muted-foreground">{hud.status === "win" ? "Mas era descafeínado!" : hud.mode === 'dungeon' ? "A masmorra muda a cada tentativa." : ''}</p>
+          <p className="text-muted-foreground">{hud.status === "win" ? "Mas era descafeínado!" : hud.mode === 'dungeon' ? "A masmorra muda a cada tentativa." : <p>Você chegou até a onda <strong className="text-yellow-300">{hud.wave}</strong></p>} </p>
           <button onClick={() => setRun((r) => r + 1)} className="rounded-md border border-primary px-6 py-2 font-sans tracking-widest text-primary transition hover:bg-primary hover:text-primary-foreground">DROGA!</button>
           <button onClick={() => navigate({ to: "/" })} className="font-sans text-sm text-muted-foreground transition hover:text-primary">VOLTAR AO MENU</button>
+          {hud && <CounterItens itemIcons={itemIcons} hud={hud} />}
         </div>
       )}
       {paused && hud?.status === "play" && (
@@ -51,8 +73,20 @@ export function GamePage({ mode }: { mode: GameMode }) {
           <button autoFocus onClick={() => resumeRef.current?.()} className="rounded-md border border-primary px-6 py-2 font-sans tracking-widest text-primary transition hover:bg-primary hover:text-primary-foreground">CONTINUAR</button>
           <button onClick={() => setRun((r) => r + 1)} className="rounded-md border border-primary px-6 py-2 font-sans tracking-widest text-primary transition hover:bg-primary hover:text-primary-foreground">REINICIAR JOGO</button>
           <button onClick={() => navigate({ to: "/" })} className="font-sans text-sm text-muted-foreground transition hover:text-primary">VOLTAR AO MENU</button>
+          {hud && <CounterItens itemIcons={itemIcons} hud={hud} />}
         </div>
       )}
     </main>
   );
 }
+
+function CounterItens({ itemIcons, hud }: any) {
+  return (
+    <div className="pointer-events-none absolute right-5 bottom-4 flex max-w-64 flex-wrap gap-x-3 gap-y-1 rounded px-2 py-1.5" aria-label="Itens coletados durante a partida">
+      {itemIcons.map(({ kind, label, src }) => <div key={kind} className="flex items-center gap-1" title={`${label}: ${hud.itemCounts[kind]}`} aria-label={`${label}: ${hud.itemCounts[kind]}`}>
+        <img className="w-8 object-cover" src={src} alt="" />
+        <span className="text-md font-title font-semibold tabular-nums text-primary">{hud.itemCounts[kind]}</span>
+      </div>)}
+    </div>
+  )
+}  

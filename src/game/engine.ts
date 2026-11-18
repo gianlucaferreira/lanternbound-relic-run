@@ -9,10 +9,13 @@ import revolverItemSrc from "@/assets/sprite-revolver.png";
 import bootsItemSrc from "@/assets/sprite-boots.png";
 import relicItemSrc from "@/assets/sprite-cafe.png";
 import guizoItemSrc from "@/assets/Guizo.png";
+import lupaItemSrc from "@/assets/lupa.png";
+
 import attackCursorSrc from "@/assets/sprite-attack-cursor.png";
 import swordSlashFrameOneSrc from "@/assets/sprite-corte.png";
 import swordSlashFrameTwoSrc from "@/assets/sprite-corte-2.png";
 import punchLineSrc from "@/assets/sprite-soco.png";
+
 import { CHARACTER_SPRITES, CHARACTERS, ENEMIES, WEAPONS, createCharacterState, createEnemy, getCharacterSprite, type CharacterDefinition, type CharacterProgress } from "./characters";
 
 import type { Enemy, HUD, Item, Projectile, Room, GameMode } from "./types";
@@ -32,6 +35,8 @@ const DIRS: [number, number][] = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 const HEAL_DROP_CHANCE = 0.25;
 const HEAL_AMOUNT = 1;
 const GUIZO_DROP_CHANCE = 0.025;
+const RUNA_DROP_CHANCE = 0.04;
+const RUNA_MELEE_REACH_BONUS = 0.45;
 const BASE_DAMAGE_INVINCIBILITY_DURATION = 0.8;
 const GUIZO_DAMAGE_INVINCIBILITY_BONUS = 0.8;
 
@@ -53,6 +58,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     bootsItem: mkImg(bootsItemSrc),
     relicItem: mkImg(relicItemSrc),
     guizoItem: mkImg(guizoItemSrc),
+    lupaItem: mkImg(lupaItemSrc),
     attackCursor: mkImg(attackCursorSrc),
     swordSlashFrames: [mkImg(swordSlashFrameOneSrc), mkImg(swordSlashFrameTwoSrc)],
     punchLine: mkImg(punchLineSrc),
@@ -65,9 +71,11 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     potion: SPR.potion,
     relic: SPR.relicItem,
     guizo: SPR.guizoItem,
+    runa: SPR.lupaItem,
   };
   const ctx = canvas.getContext("2d")!;
   const rooms = new Map<string, Room>();
+  const itemCounts: HUD["itemCounts"] = { heart: 0, sword: 0, boots: 0, bow: 0, potion: 0, relic: 0, guizo: 0, runa: 0 };
   const key = (x: number, y: number) => `${x},${y}`;
   const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 
@@ -88,7 +96,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     return { gx, gy, enemies, items: [], cleared: kind === "start", visited: kind === "start", kind };
   }
 
-  const p = { x: 5.5, y: 5.5, ...createCharacterState(selectedCharacter), hasSecondaryWeapon: !["kaya", "josias"].includes(selectedCharacter.id) || mode !== "dungeon", fx: 0, fy: 1, atk: 0, cd: 0, inv: 0, damageInvDuration: BASE_DAMAGE_INVINCIBILITY_DURATION };
+  const p = { x: 5.5, y: 5.5, ...createCharacterState(selectedCharacter), hasSecondaryWeapon: !["kaya", "josias"].includes(selectedCharacter.id) || mode !== "dungeon", fx: 0, fy: 1, atk: 0, cd: 0, inv: 0, damageInvDuration: BASE_DAMAGE_INVINCIBILITY_DURATION, meleeReachBonus: 0 };
   const projectiles: Projectile[] = [];
   let room = rooms.get(key(0, 0))!;
   let wave = mode === "waves" ? 1 : 0;
@@ -167,6 +175,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         onProgress?.();
         if (Math.random() < (mode === "waves" ? 0.1 : HEAL_DROP_CHANCE)) room.items.push({ x: enemy.x, y: enemy.y, kind: "potion" });
         if (Math.random() < GUIZO_DROP_CHANCE) room.items.push({ x: enemy.x, y: enemy.y, kind: "guizo" });
+        if (Math.random() < RUNA_DROP_CHANCE) room.items.push({ x: enemy.x, y: enemy.y, kind: "runa" });
       }
     }
     room.enemies = survivors;
@@ -181,7 +190,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       return;
     }
     p.cd = 0.35;
-    const meleeReach = isJosiasHammer ? 1.85 : selectedCharacter.id === "kaya" ? 1.6 : selectedCharacter.id === "josias" ? 1.15 : 1.3;
+    const meleeReach = (isJosiasHammer ? 1.85 : selectedCharacter.id === "kaya" ? 1.6 : selectedCharacter.id === "josias" ? 1.15 : 1.3) + p.meleeReachBonus;
     const isJosiasPunch = selectedCharacter.id === "josias" && p.weapon === "melee";
     const meleeDamage = p.dmg + (isJosiasPunch ? 1 : 0);
     let punchTarget: Enemy | undefined;
@@ -330,6 +339,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     room.items = room.items.filter((it) => {
       if (Math.hypot(it.x - p.x, it.y - p.y) > 0.6) return true;
       if (it.kind === "potion" && p.hp >= p.maxHp) return true;
+      itemCounts[it.kind] += 1;
       if (it.kind === "heart") { p.maxHp += 1; p.hp = p.maxHp; say("Coração! Vida máxima +1"); }
       if (it.kind === "sword") {
         p.dmg += 1;
@@ -349,6 +359,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         }
       }
       if (it.kind === "guizo") { p.damageInvDuration += GUIZO_DAMAGE_INVINCIBILITY_BONUS; say("Guizo raro! Invencibilidade após dano aumentada!"); }
+      if (it.kind === "runa") { p.meleeReachBonus += RUNA_MELEE_REACH_BONUS; say("Runa do Alcance! Range das armas melee aumentado!"); }
       if (it.kind === "relic") { status = "win"; }
       return false;
     });
@@ -415,17 +426,23 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     for (const it of room.items) list.push({
       d: it.x + it.y, draw: () => {
         const [sx, sy] = iso(it.x, it.y); const b = Math.sin(t / 250) * 4; shadow(sx, sy, 10);
-        const size = { heart: 40, sword: 48, boots: 44, bow: 56, potion: 44, relic: 56, guizo: 48 }[it.kind];
+        const size = { heart: 40, sword: 48, boots: 44, bow: 56, potion: 44, relic: 56, guizo: 48, runa: 42 }[it.kind];
         if (it.kind === "relic") {
           const rg = ctx.createRadialGradient(sx, sy - 24, 2, sx, sy - 24, 40); rg.addColorStop(0, "rgba(255,220,90,0.7)"); rg.addColorStop(1, "rgba(255,220,90,0)"); ctx.fillStyle = rg; ctx.fillRect(sx - 40, sy - 64, 80, 80);
         }
         if (it.kind === "guizo") {
           const rg = ctx.createRadialGradient(sx, sy - 20, 2, sx, sy - 20, 30); rg.addColorStop(0, "rgba(255,220,90,0.55)"); rg.addColorStop(1, "rgba(255,220,90,0)"); ctx.fillStyle = rg; ctx.fillRect(sx - 30, sy - 50, 60, 60);
         }
+        if (it.kind === "runa") {
+          const rg = ctx.createRadialGradient(sx, sy - 20, 2, sx, sy - 20, 34); rg.addColorStop(0, "rgba(100,240,255,0.75)"); rg.addColorStop(1, "rgba(100,240,255,0)"); ctx.fillStyle = rg; ctx.fillRect(sx - 34, sy - 54, 68, 68);
+          ctx.save(); ctx.translate(sx, sy - 22 + b); ctx.rotate(Math.PI / 4); ctx.fillStyle = "#9cf7ff"; ctx.shadowColor = "#44d8ff"; ctx.shadowBlur = 16; ctx.fillRect(-9, -9, 18, 18); ctx.restore();
+          return;
+        }
         const sprite = ITEM_SPRITES[it.kind];
         if (sprite.complete && sprite.naturalWidth > 0) {
           const width = spriteWidth(sprite, size), height = spriteHeight(sprite, size);
-          ctx.drawImage(sprite, sx - width / 2, sy - height + 4 + b, width, height);
+          const lift = it.kind === "relic" ? 6 : 0;
+          ctx.drawImage(sprite, sx - width / 2, sy - height + 4 + b - lift, width, height);
         }
       }
     });
@@ -489,12 +506,12 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
             const isJosiasHammer = selectedCharacter.id === "josias" && p.weapon === "bow";
             const progress = Math.min(1, elapsed / 0.18);
             const josiasFacingDown = isJosiasPunch && p.fx > 0.5 && p.fy > 0.5;
-            const swingDistance = isJosiasPunch ? 0.34 + progress * 0.48 + (josiasFacingDown ? 0.55 : 0) : isJosiasHammer ? 0.78 : 0.58;
+            const swingDistance = isJosiasPunch ? 0.34 + progress * (0.48 + p.meleeReachBonus) + (josiasFacingDown ? 0.55 : 0) : isJosiasHammer ? 0.78 : 0.58;
             const [swingX, swingY] = iso(p.x + p.fx * swingDistance, p.y + p.fy * swingDistance);
             ctx.save();
             ctx.translate(swingX, swingY - (isJosiasPunch ? 28 : 10));
             ctx.rotate(Math.atan2(fy, fx));
-            const slashSize = isJosiasPunch ? 54 + progress * 10 : isJosiasHammer ? 88 : 76;
+            const slashSize = isJosiasPunch ? 54 + progress * (10 + p.meleeReachBonus * 20) : isJosiasHammer ? 88 : 76;
             const slashWidth = spriteWidth(frame, slashSize);
             const slashHeight = spriteHeight(frame, slashSize);
             ctx.globalAlpha = Math.min(1, p.atk / 0.07);
@@ -545,7 +562,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     if (!paused) update(dt);
     render(t);
     hudT -= dt;
-    if (hudT <= 0) { hudT = 0.1; onHud({ hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, rooms: xsVisited(), total: rooms.size, weapon: p.weapon, hasSecondaryWeapon: p.hasSecondaryWeapon, status, msg, mode, wave, enemiesRemaining: room.enemies.length, waveBreak }); }
+    if (hudT <= 0) { hudT = 0.1; onHud({ hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, rooms: xsVisited(), total: rooms.size, weapon: p.weapon, hasSecondaryWeapon: p.hasSecondaryWeapon, itemCounts: { ...itemCounts }, status, msg, mode, wave, enemiesRemaining: room.enemies.length, waveBreak }); }
     raf = requestAnimationFrame(loop);
   };
   const xsVisited = () => [...rooms.values()].filter((r) => r.visited).length;
