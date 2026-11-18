@@ -154,6 +154,10 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
   canvas.addEventListener("pointerdown", click);
 
   function say(m: string) { msg = m; msgT = 3; }
+  function keepEnemyInsideRoom(enemy: Enemy) {
+    enemy.x = Math.max(enemy.r, Math.min(W - enemy.r, enemy.x));
+    enemy.y = Math.max(enemy.r, Math.min(W - enemy.r, enemy.y));
+  }
   function clearRoomIfNeeded() {
     if (room.enemies.length || room.cleared) return;
     if (mode === "waves") {
@@ -204,12 +208,14 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
           continue;
         }
         e.hp -= meleeDamage; e.hit = 0.15; e.x += (dx / d) * 0.5; e.y += (dy / d) * 0.5;
+        keepEnemyInsideRoom(e);
       }
     }
     if (punchTarget) {
       const dx = punchTarget.x - p.x, dy = punchTarget.y - p.y, d = Math.hypot(dx, dy) || 1;
       punchTarget.hp -= meleeDamage; punchTarget.hit = 0.15;
       punchTarget.x += (dx / d) * 0.5; punchTarget.y += (dy / d) * 0.5;
+      keepEnemyInsideRoom(punchTarget);
     }
     removeDefeatedEnemies();
     clearRoomIfNeeded();
@@ -288,7 +294,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       } else {
         e.x += (dx / d) * e.spd * dt; e.y += (dy / d) * e.spd * dt;
       }
-      e.x = Math.max(0.5, Math.min(W - 0.5, e.x)); e.y = Math.max(0.5, Math.min(W - 0.5, e.y));
+      keepEnemyInsideRoom(e);
       if (d < e.r + 0.35) hurtPlayer(ENEMIES[e.kind].contactDamage, dx, dy);
     }
     // Keep every enemy type from occupying the same space. Resolve overlaps
@@ -309,10 +315,10 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         }
         const push = (minDistance - distance) / 2;
         const nx = dx / distance, ny = dy / distance;
-        a.x = Math.max(0.5, Math.min(W - 0.5, a.x - nx * push));
-        a.y = Math.max(0.5, Math.min(W - 0.5, a.y - ny * push));
-        b.x = Math.max(0.5, Math.min(W - 0.5, b.x + nx * push));
-        b.y = Math.max(0.5, Math.min(W - 0.5, b.y + ny * push));
+        a.x -= nx * push; a.y -= ny * push;
+        b.x += nx * push; b.y += ny * push;
+        keepEnemyInsideRoom(a);
+        keepEnemyInsideRoom(b);
       }
     }
     for (let i = projectiles.length - 1; i >= 0; i--) {
@@ -326,6 +332,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
           e.hp -= shot.damage; e.hit = 0.15;
           const distance = Math.hypot(shot.vx, shot.vy) || 1;
           e.x += (shot.vx / distance) * 0.18; e.y += (shot.vy / distance) * 0.18;
+          keepEnemyInsideRoom(e);
           hit = true; break;
         }
       } else if (Math.hypot(p.x - shot.x, p.y - shot.y) < 0.42) {
@@ -432,11 +439,6 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         }
         if (it.kind === "guizo") {
           const rg = ctx.createRadialGradient(sx, sy - 20, 2, sx, sy - 20, 30); rg.addColorStop(0, "rgba(255,220,90,0.55)"); rg.addColorStop(1, "rgba(255,220,90,0)"); ctx.fillStyle = rg; ctx.fillRect(sx - 30, sy - 50, 60, 60);
-        }
-        if (it.kind === "runa") {
-          const rg = ctx.createRadialGradient(sx, sy - 20, 2, sx, sy - 20, 34); rg.addColorStop(0, "rgba(100,240,255,0.75)"); rg.addColorStop(1, "rgba(100,240,255,0)"); ctx.fillStyle = rg; ctx.fillRect(sx - 34, sy - 54, 68, 68);
-          ctx.save(); ctx.translate(sx, sy - 22 + b); ctx.rotate(Math.PI / 4); ctx.fillStyle = "#9cf7ff"; ctx.shadowColor = "#44d8ff"; ctx.shadowBlur = 16; ctx.fillRect(-9, -9, 18, 18); ctx.restore();
-          return;
         }
         const sprite = ITEM_SPRITES[it.kind];
         if (sprite.complete && sprite.naturalWidth > 0) {
