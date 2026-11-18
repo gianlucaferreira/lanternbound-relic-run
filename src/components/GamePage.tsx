@@ -16,6 +16,9 @@ import guizoItemSrc from "@/assets/Guizo.png";
 import lupasItemSrc from "@/assets/lupa.png";
 
 import { CHARACTERS, awardCharacterXp, getCharacterProgress, getSelectedCharacterId } from "@/game/characters";
+import { Item } from "@/game/types";
+
+type ItemIcon = { kind: Item['kind'], label: string, src: string }
 
 export function GamePage({ mode }: { mode: GameMode }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -26,14 +29,14 @@ export function GamePage({ mode }: { mode: GameMode }) {
   const [run, setRun] = useState(0);
   const [characterId] = useState(getSelectedCharacterId);
   const character = CHARACTERS.find((candidate) => candidate.id === characterId) ?? CHARACTERS[0]!;
-  const itemIcons = [
+  const itemIcons: ItemIcon[] = [
     { kind: "heart", label: "Coração", src: heartItemSrc },
     { kind: "sword", label: "Arma corpo a corpo", src: character.id === "kaya" ? scytheItemSrc : character.id === "josias" ? brassKnucklesItemSrc : swordItemSrc },
     { kind: "boots", label: "Velocidade", src: speedItemSrc },
     { kind: "bow", label: "Arma à distância", src: character.id === "kaya" ? revolverItemSrc : character.id === "josias" ? hammerItemSrc : crossbowItemSrc },
     { kind: "guizo", label: "Guizo", src: guizoItemSrc },
     { kind: "runa", label: "Runa", src: lupasItemSrc },
-  ] as const;
+  ];
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -54,6 +57,9 @@ export function GamePage({ mode }: { mode: GameMode }) {
       {hud && <CounterItens itemIcons={itemIcons} hud={hud} />}
       <div className="pointer-events-none absolute right-5 top-4 space-y-2">
         {hud?.mode === "waves" && <div className="mt-2 rounded border border-primary/50 bg-background/80 px-3 py-2 text-sm text-primary"><strong>ONDA {hud.wave}</strong> · Inimigos restantes: {hud.enemiesRemaining}{hud.waveBreak > 0 && <><div className="text-xs text-muted-foreground">Próxima onda em {Math.ceil(hud.waveBreak)}s · recolha os itens</div><button type="button" onClick={() => skipWaveRef.current?.()} className="pointer-events-auto mt-2 rounded border border-primary px-3 py-1 text-xs font-semibold text-primary transition hover:bg-primary hover:text-primary-foreground">PULAR ESPERA</button></>}</div>}
+      </div>
+      <div className="pointer-events-none absolute right-5 top-32 space-y-2">
+        {hud?.mode === "dungeon" && <p className="px-3 py-1 text-sm font-semibold text-primary">FASE {hud.phase} / {hud.phaseCount}</p>}
       </div>
       <div className="pointer-events-none absolute left-5 bottom-4 space-y-2">
         <p className="max-w-xs bottom-0 text-xs text-muted-foreground">WASD/setas para mover · Espaço ou clique para atacar · Q alterna entre as armas do personagem · ESC para pausar{mode === "waves" && " · T para pular a espera entre ondas"}</p>
@@ -80,11 +86,11 @@ export function GamePage({ mode }: { mode: GameMode }) {
   );
 }
 
-function CounterItens({ itemIcons, hud }: any) {
+function CounterItens({ itemIcons, hud }: { itemIcons: ItemIcon[], hud: HUD }) {
   return (
     <div className="pointer-events-none absolute right-5 bottom-4 flex max-w-64 flex-wrap gap-x-3 gap-y-1 rounded px-2 py-1.5" aria-label="Itens coletados durante a partida">
       {itemIcons.map(({ kind, label, src }) => <div key={kind} className="flex items-center gap-1" title={`${label}: ${hud.itemCounts[kind]}`} aria-label={`${label}: ${hud.itemCounts[kind]}`}>
-        <img className="w-8 object-cover" src={src} alt="" />
+        <img className="w-10 max-h-8 object-contain" src={src} alt="" />
         <span className="text-md font-title font-semibold tabular-nums text-primary">{hud.itemCounts[kind]}</span>
       </div>)}
     </div>

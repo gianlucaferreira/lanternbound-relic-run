@@ -7,6 +7,7 @@ export function generateDungeon(
   rooms: Map<string, Room>,
   key: (x: number, y: number) => string,
   makeRoom: (gx: number, gy: number, kind: Room["kind"]) => Room,
+  phase = 1,
 ) {
   let cx = 0, cy = 0;
   rooms.set(key(0, 0), makeRoom(0, 0, "start"));
@@ -31,17 +32,20 @@ export function generateDungeon(
   const farthest = [...distances.entries()].sort((a, b) => b[1] - a[1])[0]![0];
   const bossRoom = rooms.get(farthest)!;
   bossRoom.kind = "boss";
-  bossRoom.enemies = [createBoss(30, 1.7, 5.5, 4)];
+  // Same boss appearance across phases, with a tougher encounter each time.
+  bossRoom.enemies = [createBoss(30 + (phase - 1) * 15, 1.7 + (phase - 1) * 0.2, 5.5, 4)];
   bossRoom.items = [];
 }
 
-export function completeDungeonRoom(room: Room, phase: number, say: (message: string) => void, secondaryWeapon: "sword" | "bow" = "bow", secondaryWeaponName = "besta") {
-  const guaranteedSecondaryDrop = phase === 1;
+export function completeDungeonRoom(room: Room, visitedRooms: number, say: (message: string) => void, secondaryWeapon: "sword" | "bow" = "bow", secondaryWeaponName = "besta", finalBoss = true) {
+  const guaranteedSecondaryDrop = visitedRooms === 2;
   room.cleared = true;
   if (room.kind === "boss") {
-    room.items.push({ x: 5.5, y: 5.5, kind: "relic" });
+    room.items.push({ x: 5.5, y: 5.5, kind: finalBoss ? "relic" : "phaseKey" });
     if (guaranteedSecondaryDrop) room.items.push({ x: 5.5, y: 5.5, kind: secondaryWeapon });
-    say(guaranteedSecondaryDrop ? `O guardião caiu! Pegue o Café e a ${secondaryWeaponName}!` : "O guardião caiu! Pegue o Café!");
+    say(finalBoss
+      ? (guaranteedSecondaryDrop ? `O guardião caiu! Pegue o Café e a ${secondaryWeaponName}!` : "O guardião caiu! Pegue o Café!")
+      : "Guardião derrotado! Pegue a escada para avançar de fase.");
   } else if (guaranteedSecondaryDrop) {
     room.items.push({ x: 5.5, y: 5.5, kind: secondaryWeapon });
     say(`Sala limpa! A ${secondaryWeaponName} garantida está no chão...`);

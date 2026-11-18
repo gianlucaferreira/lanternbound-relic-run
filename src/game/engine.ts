@@ -10,6 +10,8 @@ import bootsItemSrc from "@/assets/sprite-boots.png";
 import relicItemSrc from "@/assets/sprite-cafe.png";
 import guizoItemSrc from "@/assets/Guizo.png";
 import lupaItemSrc from "@/assets/lupa.png";
+import stairItemSrc from "@/assets/sprite-escada.png";
+
 
 import attackCursorSrc from "@/assets/sprite-attack-cursor.png";
 import swordSlashFrameOneSrc from "@/assets/sprite-corte.png";
@@ -40,6 +42,7 @@ const RUNA_MELEE_REACH_BONUS = 0.45;
 const MAX_MELEE_REACH = 2.2;
 const BASE_DAMAGE_INVINCIBILITY_DURATION = 0.8;
 const GUIZO_DAMAGE_INVINCIBILITY_BONUS = 0.8;
+const DUNGEON_PHASE_COUNT = 3;
 
 export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mode: GameMode = "dungeon", onPause?: (paused: boolean) => void, onSkipWave?: (skip: () => void) => void, character?: CharacterDefinition, progress?: CharacterProgress, onProgress?: () => void, onResumeReady?: (resume: () => void) => void) {
   const mkImg = (src: string) => { const image = new Image(); image.src = src; return image; };
@@ -58,6 +61,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     heartItem: mkImg(heartItemSrc),
     bootsItem: mkImg(bootsItemSrc),
     relicItem: mkImg(relicItemSrc),
+    stairItem: mkImg(stairItemSrc),
     guizoItem: mkImg(guizoItemSrc),
     lupaItem: mkImg(lupaItemSrc),
     attackCursor: mkImg(attackCursorSrc),
@@ -71,16 +75,18 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     bow: mkImg(selectedCharacter.id === "kaya" ? revolverItemSrc : selectedCharacter.id === "josias" ? hammerItemSrc : WEAPONS.bow.sprite),
     potion: SPR.potion,
     relic: SPR.relicItem,
+    phaseKey: SPR.stairItem,
     guizo: SPR.guizoItem,
     runa: SPR.lupaItem,
   };
   const ctx = canvas.getContext("2d")!;
   const rooms = new Map<string, Room>();
   const itemCounts: HUD["itemCounts"] = { heart: 0, sword: 0, boots: 0, bow: 0, potion: 0, relic: 0, guizo: 0, runa: 0 };
+  let dungeonPhase = 1;
   const key = (x: number, y: number) => `${x},${y}`;
   const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 
-  if (mode === "dungeon") generateDungeon(rooms, key, mkRoom);
+  if (mode === "dungeon") generateDungeon(rooms, key, mkRoom, dungeonPhase);
   else rooms.set(key(0, 0), mkRoom(0, 0, "start"));
 
   function mkRoom(gx: number, gy: number, kind: Room["kind"]): Room {
@@ -167,10 +173,10 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       waveBreak = 10;
       return;
     }
-    const phase = [...rooms.values()].filter((candidate) => candidate.visited).length;
+    const visitedRooms = [...rooms.values()].filter((candidate) => candidate.visited).length;
     const secondaryWeaponDrop = selectedCharacter.id === "kaya" ? "sword" : "bow";
     const secondaryWeaponName = selectedCharacter.id === "kaya" ? "foice" : selectedCharacter.id === "josias" ? "martelo" : "besta";
-    completeDungeonRoom(room, phase, say, secondaryWeaponDrop, secondaryWeaponName);
+    completeDungeonRoom(room, visitedRooms, say, secondaryWeaponDrop, secondaryWeaponName, dungeonPhase === DUNGEON_PHASE_COUNT);
     if (Math.random() < RUNA_DROP_CHANCE) room.items.push({ x: 5.5, y: 5.5, kind: "runa" });
   }
   function removeDefeatedEnemies() {
@@ -353,6 +359,17 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     room.items = room.items.filter((it) => {
       if (Math.hypot(it.x - p.x, it.y - p.y) > 0.6) return true;
       if (it.kind === "potion" && p.hp >= p.maxHp) return true;
+      if (it.kind === "phaseKey") {
+        dungeonPhase += 1;
+        rooms.clear();
+        generateDungeon(rooms, key, mkRoom, dungeonPhase);
+        room = rooms.get(key(0, 0))!;
+        p.x = 5.5;
+        p.y = 5.5;
+        projectiles.length = 0;
+        say(`Fase ${dungeonPhase} de ${DUNGEON_PHASE_COUNT}! Um novo guardião aguarda.`);
+        return false;
+      }
       itemCounts[it.kind] += 1;
       if (it.kind === "heart") { p.maxHp += 1; p.hp = p.maxHp; say("Coração! Vida máxima +1"); }
       if (it.kind === "sword") {
@@ -439,10 +456,12 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     const shadow = (sx: number, sy: number, r: number) => { ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.beginPath(); ctx.ellipse(sx, sy, r, r / 2, 0, 0, Math.PI * 2); ctx.fill(); };
     for (const it of room.items) list.push({
       d: it.x + it.y, draw: () => {
-        const [sx, sy] = iso(it.x, it.y); const b = Math.sin(t / 250) * 4; shadow(sx, sy, 10);
-        const size = { heart: 40, sword: 48, boots: 44, bow: 56, potion: 44, relic: 56, guizo: 48, runa: 42 }[it.kind];
-        if (it.kind === "relic") {
-          const rg = ctx.createRadialGradient(sx, sy - 24, 2, sx, sy - 24, 40); rg.addColorStop(0, "rgba(255,220,90,0.7)"); rg.addColorStop(1, "rgba(255,220,90,0)"); ctx.fillStyle = rg; ctx.fillRect(sx - 40, sy - 64, 80, 80);
+        const [sx, sy] = iso(it.x, it.y); const b = it.kind === "phaseKey" ? 0 : Math.sin(t / 250) * 4;
+        if (it.kind !== "phaseKey") shadow(sx, sy, 10);
+        const size = { heart: 40, sword: 48, boots: 44, bow: 56, potion: 44, relic: 56, phaseKey: 56, guizo: 48, runa: 42 }[it.kind];
+        if (it.kind === "relic" || it.kind === "phaseKey") {
+          // const glow = it.kind === "phaseKey" ? "70,210,255" : "255,220,90";
+          // const rg = ctx.createRadialGradient(sx, sy - 24, 2, sx, sy - 24, 40); rg.addColorStop(0, `rgba(${glow},0.7)`); rg.addColorStop(1, `rgba(${glow},0)`); ctx.fillStyle = rg; ctx.fillRect(sx - 40, sy - 64, 80, 80);
         }
         if (it.kind === "guizo") {
           const rg = ctx.createRadialGradient(sx, sy - 20, 2, sx, sy - 20, 30); rg.addColorStop(0, "rgba(255,220,90,0.55)"); rg.addColorStop(1, "rgba(255,220,90,0)"); ctx.fillStyle = rg; ctx.fillRect(sx - 30, sy - 50, 60, 60);
@@ -450,6 +469,15 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         const sprite = ITEM_SPRITES[it.kind];
         if (sprite.complete && sprite.naturalWidth > 0) {
           const width = spriteWidth(sprite, size), height = spriteHeight(sprite, size);
+          if (it.kind === "phaseKey") {
+            const width = spriteWidth(sprite, size), height = spriteHeight(sprite, size);
+            ctx.save();
+            ctx.translate(sx, sy - height / 2 + 10);
+            ctx.rotate(-5 * Math.PI / 180);
+            ctx.drawImage(sprite, -width / 2, -height / 2, width, height);
+            ctx.restore();
+            return;
+          }
           const lift = it.kind === "relic" ? 6 : 0;
           ctx.drawImage(sprite, sx - width / 2, sy - height + 4 + b - lift, width, height);
         }
@@ -571,7 +599,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     if (!paused) update(dt);
     render(t);
     hudT -= dt;
-    if (hudT <= 0) { hudT = 0.1; onHud({ hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, rooms: xsVisited(), total: rooms.size, weapon: p.weapon, hasSecondaryWeapon: p.hasSecondaryWeapon, itemCounts: { ...itemCounts }, status, msg, mode, wave, enemiesRemaining: room.enemies.length, waveBreak }); }
+    if (hudT <= 0) { hudT = 0.1; onHud({ hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, rooms: xsVisited(), total: rooms.size, weapon: p.weapon, hasSecondaryWeapon: p.hasSecondaryWeapon, itemCounts: { ...itemCounts }, status, msg, mode, wave, phase: dungeonPhase, phaseCount: mode === "dungeon" ? DUNGEON_PHASE_COUNT : 0, enemiesRemaining: room.enemies.length, waveBreak }); }
     raf = requestAnimationFrame(loop);
   };
   const xsVisited = () => [...rooms.values()].filter((r) => r.visited).length;
