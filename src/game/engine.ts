@@ -11,6 +11,10 @@ import relicItemSrc from "@/assets/sprite-cafe.png";
 import guizoItemSrc from "@/assets/Guizo.png";
 import lupaItemSrc from "@/assets/lupa.png";
 import stairItemSrc from "@/assets/sprite-escada.png";
+import doorSrc from "@/assets/sprite-porta.png";
+import bossDoorSrc from "@/assets/sprite-porta-boss.png";
+import reversedDoorSrc from "@/assets/sprite-porta-2.png";
+import reversedBossDoorSrc from "@/assets/sprite-porta-boss-2.png";
 
 
 import attackCursorSrc from "@/assets/sprite-attack-cursor.png";
@@ -23,6 +27,7 @@ import { CHARACTER_SPRITES, CHARACTERS, ENEMIES, WEAPONS, createCharacterState, 
 import type { Enemy, HUD, Item, Projectile, Room, GameMode } from "./types";
 import { completeDungeonRoom, generateDungeon } from "./modes/dungeon";
 import { completeWave, spawnWave } from "./modes/waves";
+import { SaladIcon } from "lucide-react";
 
 export type { GameMode, HUD } from "./types";
 
@@ -62,6 +67,10 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     bootsItem: mkImg(bootsItemSrc),
     relicItem: mkImg(relicItemSrc),
     stairItem: mkImg(stairItemSrc),
+    door: mkImg(doorSrc),
+    bossDoor: mkImg(bossDoorSrc),
+    reversedDoor: mkImg(reversedDoorSrc),
+    reversedBossDoor: mkImg(reversedBossDoorSrc),
     guizoItem: mkImg(guizoItemSrc),
     lupaItem: mkImg(lupaItemSrc),
     attackCursor: mkImg(attackCursorSrc),
@@ -427,21 +436,37 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     // back walls (top-left: x=0, top-right: y=0)
     const wallSeg = (a: [number, number], b: [number, number], col: string) => poly([a, b, [b[0], b[1] - WALL], [a[0], a[1] - WALL]], col, "rgba(0,0,0,0.5)");
     for (let k = 0; k < W; k++) {
-      const gapY = room.cleared ? false : true;
       const isDoorN = Math.abs(k + 0.5 - 5.5) < 0.6 && door(0);
       const isDoorW = Math.abs(k + 0.5 - 5.5) < 0.6 && door(3);
       if (!isDoorN) wallSeg(iso(k, 0), iso(k + 1, 0), k % 2 ? "#3a3440" : "#423b49");
-      else if (gapY) wallSeg(iso(k, 0), iso(k + 1, 0), "#6b3b2a");
+      // Door sprites are drawn over the doorway openings below.
       if (!isDoorW) wallSeg(iso(0, k), iso(0, k + 1), k % 2 ? "#2c2731" : "#332d39");
-      else if (gapY) wallSeg(iso(0, k), iso(0, k + 1), "#5a3123");
     }
-    // front door markers
-    const mark = (x: number, y: number) => {
+    // Draw a sprite for every connected room. Only the entrance to the boss room differs.
+    const drawDoor = (dir: number, x: number, y: number) => {
+      const [dx, dy] = DIRS[dir]!;
+      const nextRoom = rooms.get(key(room.gx + dx, room.gy + dy));
+      if (!nextRoom) return;
+      const reversed = dir === 0 || dir === 2;
+      const sprite = reversed
+        ? nextRoom.kind === "boss" ? SPR.reversedBossDoor : SPR.reversedDoor
+        : nextRoom.kind === "boss" ? SPR.bossDoor : SPR.door;
+      if (!sprite.complete || !sprite.naturalWidth) return;
       const [sx, sy] = iso(x, y);
-      ctx.fillStyle = room.cleared ? "rgba(255,200,90,0.8)" : "rgba(160,40,40,0.8)";
-      ctx.beginPath(); ctx.ellipse(sx, sy, 22, 10, 0, 0, Math.PI * 2); ctx.fill();
-    };
-    if (door(2)) mark(5.5, W); if (door(1)) mark(W, 5.5);
+      // Keep the sprite upright and align its base with the doorway on the room edge.
+      const height = WALL;
+      const sourceWidth = reversed ? 960 : sprite.naturalWidth;
+      const width = height * sourceWidth / sprite.naturalHeight;
+      ctx.save();
+      ctx.translate(sx, sy - height / 2);
+      if (reversed) ctx.drawImage(sprite, 704, 0, 960, 2048, -width / 2, -height / 2, width, height);
+      else ctx.drawImage(sprite, -width / 2, -height / 2, width, height);
+      ctx.restore();
+    }; SaladIcon
+    if (door(0)) drawDoor(0, 5.5, 0);
+    if (door(1)) drawDoor(1, W, 5.5);
+    if (door(2)) drawDoor(2, 5.5, W);
+    if (door(3)) drawDoor(3, 0, 5.5);
     // torches
     for (const [x, y] of [[2.5, 0], [8.5, 0], [0, 2.5], [0, 8.5]] as [number, number][]) {
       const [sx, sy] = iso(x, y); const f = 0.7;
@@ -455,7 +480,9 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     const list: D[] = [];
     const shadow = (sx: number, sy: number, r: number) => { ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.beginPath(); ctx.ellipse(sx, sy, r, r / 2, 0, 0, Math.PI * 2); ctx.fill(); };
     for (const it of room.items) list.push({
-      d: it.x + it.y, draw: () => {
+      // Keep the phase key on the layer directly behind the player so its tall sprite
+      // cannot cover the character when they overlap.
+      d: it.kind === "phaseKey" ? p.x + p.y - 0.001 : it.x + it.y, draw: () => {
         const [sx, sy] = iso(it.x, it.y); const b = it.kind === "phaseKey" ? 0 : Math.sin(t / 250) * 4;
         if (it.kind !== "phaseKey") shadow(sx, sy, 10);
         const size = { heart: 40, sword: 48, boots: 44, bow: 56, potion: 44, relic: 56, phaseKey: 56, guizo: 48, runa: 42 }[it.kind];
@@ -479,6 +506,9 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
             return;
           }
           const lift = it.kind === "relic" ? 6 : 0;
+          if (it.kind === "relic") {
+            const rg = ctx.createRadialGradient(sx, sy - 20, 2, sx, sy - 20, 30); rg.addColorStop(0, "rgba(255,220,90,0.55)"); rg.addColorStop(1, "rgba(255,220,90,0)"); ctx.fillStyle = rg; ctx.fillRect(sx - 30, sy - 50, 60, 60);
+          }
           ctx.drawImage(sprite, sx - width / 2, sy - height + 4 + b - lift, width, height);
         }
       }
