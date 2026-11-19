@@ -467,12 +467,10 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       const [sx, sy] = iso(x, y);
       // Keep the sprite upright and align its base with the doorway on the room edge.
       const height = WALL;
-      const sourceWidth = reversed ? 960 : sprite.naturalWidth;
-      const width = height * sourceWidth / sprite.naturalHeight;
+      const width = height * sprite.naturalWidth / sprite.naturalHeight;
       ctx.save();
       ctx.translate(sx, sy - height / 2);
-      if (reversed) ctx.drawImage(sprite, 704, 0, 960, 2048, -width / 2, -height / 2, width, height);
-      else ctx.drawImage(sprite, -width / 2, -height / 2, width, height);
+      ctx.drawImage(sprite, -width / 2, -height / 2, width, height);
       ctx.restore();
     }; SaladIcon
     if (door(0)) drawDoor(0, 5.5, 0);
