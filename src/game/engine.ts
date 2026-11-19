@@ -511,10 +511,6 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       ctx.drawImage(sprite, -width / 2, -height, width, height);
       ctx.restore();
     }; SaladIcon
-    if (door(0)) drawDoor(0, 5.5, 0);
-    if (door(1)) drawDoor(1, W, 5.5);
-    if (door(2)) drawDoor(2, 5.5, W);
-    if (door(3)) drawDoor(3, 0, 5.5);
     // Wall lamps
     for (const [x, y] of [[2.5, 0], [8.5, 0], [0, 2.5], [0, 8.5]] as [number, number][]) {
       const [sx, sy] = iso(x, y); const f = 0.7;
@@ -656,6 +652,11 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       }
     });
     list.sort((a, b) => a.d - b.d).forEach((x) => x.draw());
+    // Draw doors over the entities so they stay in front of characters.
+    if (door(0)) drawDoor(0, 5.5, 0);
+    if (door(1)) drawDoor(1, W - 0.8 + 1.1, 5.8);
+    if (door(2)) drawDoor(2, 5.8, W + 0.2);
+    if (door(3)) drawDoor(3, 0, 5.5);
     // The reference map is only used in dungeon mode; keep it clear of the HUD.
     if (mode === "dungeon") {
       const ms = 14, margin = 20, padding = 8;
