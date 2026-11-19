@@ -14,11 +14,17 @@ import stairItemSrc from "@/assets/sprite-escada.png";
 import doorSrc from "@/assets/sprite-porta-fechada.png";
 import openDoorSrc from "@/assets/sprite-porta-aberta.png";
 import bossDoorSrc from "@/assets/sprite-porta-boss-fechada.png";
-import openBossDoorSrc from "@/assets/sprite-porta-boss-aberta.png";
+import openBossDoorSrc from "@/assets/sprite-porta-boss-2-aberta.png";
 import reversedDoorSrc from "@/assets/sprite-porta-2-fechada.png";
 import openReversedDoorSrc from "@/assets/sprite-porta-2-aberta.png";
 import reversedBossDoorSrc from "@/assets/sprite-porta-boss-2-fechada.png";
-import openReversedBossDoorSrc from "@/assets/sprite-porta-boss-2-aberta.png";
+import openReversedBossDoorSrc from "@/assets/sprite-porta-boss-aberta.png";
+import wallTileSrc from "@/assets/sprite-parede.png";
+import floorTileSrc from "@/assets/sprite-chao-madeira.png";
+import bossFloorTileSrc from "@/assets/sprite-chao-boss.png";
+
+import lampOneSrc from "@/assets/sprite-lampada-1.png";
+import lampTwoSrc from "@/assets/sprite-lampada-2.png";
 
 import attackCursorSrc from "@/assets/sprite-attack-cursor.png";
 import swordSlashFrameOneSrc from "@/assets/sprite-corte.png";
@@ -34,7 +40,7 @@ import { SaladIcon } from "lucide-react";
 
 export type { GameMode, HUD } from "./types";
 
-const W = 11, TW = 64, TH = 32, WALL = 46;
+const W = 11, TW = 64, TH = 32, WALL = 50;
 // Sprite PNGs were cropped to their opaque bounds from 2048x2048 canvases.
 // Keep their old on-screen footprint while preserving each crop's aspect ratio.
 const SPRITE_SOURCE_SIZE = 2048;
@@ -57,6 +63,12 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
   const selectedCharacter = character ?? CHARACTERS[0]!;
   const SPR = {
     hero: mkImg(selectedCharacter.sprites.melee),
+    floorTile: mkImg(floorTileSrc),
+    bossFloorTile: mkImg(floorTileSrc),
+    lampOne: mkImg(lampOneSrc),
+    lampTwo: mkImg(lampTwoSrc),
+    wallTile: mkImg(wallTileSrc),
+    wallTileSide: mkImg(wallTileSrc),
     heroAttack: mkImg(selectedCharacter.sprites.attack),
     heroRanged: mkImg(selectedCharacter.sprites.ranged),
     heroRangedAttack: selectedCharacter.sprites.rangedAttack ? mkImg(selectedCharacter.sprites.rangedAttack) : mkImg(selectedCharacter.sprites.ranged),
@@ -419,6 +431,26 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
     ctx.fillStyle = fill; ctx.fill(); if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(); }
   }
+  function texturedQuad(image: HTMLImageElement, points: [number, number][]) {
+    if (!image.complete || !image.naturalWidth || !image.naturalHeight) return false;
+    const [a, b, , d] = points;
+    const sw = image.naturalWidth, sh = image.naturalHeight;
+    ctx.save();
+    ctx.transform((b[0] - a[0]) / sw, (b[1] - a[1]) / sw, (d[0] - a[0]) / sh, (d[1] - a[1]) / sh, a[0], a[1]);
+    ctx.drawImage(image, 0, 0);
+    ctx.restore();
+    return true;
+  }
+  function texturedWall(image: HTMLImageElement, points: [number, number][]) {
+    if (!image.complete || !image.naturalWidth || !image.naturalHeight) return false;
+    const [a, b, , d] = points;
+    const sw = image.naturalWidth, sh = image.naturalHeight;
+    ctx.save();
+    ctx.transform((b[0] - a[0]) / sw, (b[1] - a[1]) / sw, -(d[0] - a[0]) / sh, -(d[1] - a[1]) / sh, d[0], d[1]);
+    ctx.drawImage(image, 0, 0);
+    ctx.restore();
+    return true;
+  }
   function render(t: number) {
     const dpr = window.devicePixelRatio || 1;
     const cw = canvas.clientWidth, ch = canvas.clientHeight;
@@ -438,16 +470,21 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     for (let i = 0; i < W; i++) for (let j = 0; j < W; j++) {
       const shade = ((i * 7 + j * 13 + room.gx * 3 + room.gy * 5) % 5) * 4;
       const base = boss ? [70 + shade, 38 + shade / 2, 36] : [58 + shade, 54 + shade, 62 + shade];
-      poly([iso(i, j), iso(i + 1, j), iso(i + 1, j + 1), iso(i, j + 1)], `rgb(${base})`, "rgba(0,0,0,0.35)");
+      const tile = [iso(i, j), iso(i + 1, j), iso(i + 1, j + 1), iso(i, j + 1)] as [number, number][];
+      if (texturedQuad(boss ? SPR.bossFloorTile : SPR.floorTile, tile)) {
+        poly(tile, "rgba(0,0,0,0)", "rgba(0,0,0,0.22)");
+      } else poly(tile, `rgb(${base})`, "rgba(0,0,0,0.35)");
     }
     // back walls (top-left: x=0, top-right: y=0)
-    const wallSeg = (a: [number, number], b: [number, number], col: string) => poly([a, b, [b[0], b[1] - WALL], [a[0], a[1] - WALL]], col, "rgba(0,0,0,0.5)");
+    const wallSeg = (a: [number, number], b: [number, number], image: HTMLImageElement, col: string) => {
+      const face = [a, b, [b[0], b[1] - WALL], [a[0], a[1] - WALL]] as [number, number][];
+      if (!texturedWall(image, face)) poly(face, col, "rgba(0,0,0,0.5)");
+    };
     for (let k = 0; k < W; k++) {
-      const isDoorN = Math.abs(k + 0.5 - 5.5) < 0.6 && door(0);
-      const isDoorW = Math.abs(k + 0.5 - 5.5) < 0.6 && door(3);
-      if (!isDoorN) wallSeg(iso(k, 0), iso(k + 1, 0), k % 2 ? "#3a3440" : "#423b49");
-      // Door sprites are drawn over the doorway openings below.
-      if (!isDoorW) wallSeg(iso(0, k), iso(0, k + 1), k % 2 ? "#2c2731" : "#332d39");
+      // Keep the wall tile behind each doorway; the door sprite is drawn over it below.
+      // These are visual-only canvas tiles and do not affect movement collision.
+      wallSeg(iso(k, 0), iso(k + 1, 0), SPR.wallTile, k % 2 ? "#3a3440" : "#423b49");
+      wallSeg(iso(0, k), iso(0, k + 1), SPR.wallTileSide, k % 2 ? "#2c2731" : "#332d39");
     }
     // Draw a sprite for every connected room. Only the entrance to the boss room differs.
     const drawDoor = (dir: number, x: number, y: number) => {
@@ -466,24 +503,32 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       if (!sprite.complete || !sprite.naturalWidth) return;
       const [sx, sy] = iso(x, y);
       // Keep the sprite upright and align its base with the doorway on the room edge.
-      const height = WALL;
+      // Enlarge the door uniformly and keep its lower edge anchored to the wall.
+      const height = WALL * 1.3;
       const width = height * sprite.naturalWidth / sprite.naturalHeight;
       ctx.save();
-      ctx.translate(sx, sy - height / 2);
-      ctx.drawImage(sprite, -width / 2, -height / 2, width, height);
+      ctx.translate(sx, sy);
+      ctx.drawImage(sprite, -width / 2, -height, width, height);
       ctx.restore();
     }; SaladIcon
     if (door(0)) drawDoor(0, 5.5, 0);
     if (door(1)) drawDoor(1, W, 5.5);
     if (door(2)) drawDoor(2, 5.5, W);
     if (door(3)) drawDoor(3, 0, 5.5);
-    // torches
+    // Wall lamps
     for (const [x, y] of [[2.5, 0], [8.5, 0], [0, 2.5], [0, 8.5]] as [number, number][]) {
       const [sx, sy] = iso(x, y); const f = 0.7;
+      const lampGlow = boss ? "255,0,24" : "255,170,70";
       const tg = ctx.createRadialGradient(sx, sy - 30, 2, sx, sy - 30, 60);
-      tg.addColorStop(0, `rgba(255,170,70,${0.5 * f})`); tg.addColorStop(1, "rgba(255,170,70,0)");
+      tg.addColorStop(0, `rgba(${lampGlow},${0.5 * f})`); tg.addColorStop(1, `rgba(${lampGlow},0)`);
       ctx.fillStyle = tg; ctx.fillRect(sx - 60, sy - 90, 120, 120);
-      ctx.fillStyle = "#ffcf6a"; ctx.beginPath(); ctx.arc(sx, sy - 30, 4 * f, 0, Math.PI * 2); ctx.fill();
+      // Lamp 1 faces the north wall; lamp 2 faces the west wall.
+      const lamp = y === 0 ? SPR.lampTwo : SPR.lampOne;
+      if (lamp.complete && lamp.naturalWidth > 0) {
+        const height = 24;
+        const width = height * lamp.naturalWidth / lamp.naturalHeight;
+        ctx.drawImage(lamp, sx - width / 2, sy - height - 16, width, height);
+      }
     }
     // entities sorted by depth
     type D = { d: number; draw: () => void };
@@ -509,7 +554,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
           if (it.kind === "phaseKey") {
             const width = spriteWidth(sprite, size), height = spriteHeight(sprite, size);
             ctx.save();
-            ctx.translate(sx, sy - height / 2 + 10);
+            ctx.translate(sx, sy - height / 2 + 5);
             // ctx.rotate(-35 * Math.PI / 180);
             ctx.drawImage(sprite, -width / 2, -height / 2, width, height);
             ctx.restore();

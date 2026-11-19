@@ -6,9 +6,9 @@ import kairoPortrait from "@/assets/characters/Kairo.png";
 import misterPortrait from "@/assets/characters/Mister.png";
 import ayamePortrait from "@/assets/characters/Ayame.png";
 
-import jeffSprite from "@/assets/sprite-hero.png";
-import jeffAttackSprite from "@/assets/hero-attack.png";
-import jeffRangedSprite from "@/assets/sprite-hero-ranged.png";
+import jeffSprite from "@/assets/characters/Jeff-espada-1.png";
+import jeffAttackSprite from "@/assets/characters/Jeff-espada-2.png";
+import jeffRangedSprite from "@/assets/characters/Jeff-crossbow.png";
 import kayaMeleeSprite from "@/assets/characters/Kaya-Foice.png";
 import kayaAttackSprite from "@/assets/characters/Kaya-Foice-2.png";
 import kayaRangedSprite from "@/assets/characters/Kaya-Pistola.png";
@@ -18,14 +18,12 @@ import josiasAttackSprite from "@/assets/characters/Josias-2.png";
 import josiasRangedSprite from "@/assets/characters/Josias-Martelo.png";
 import josiasRangedAttackSprite from "@/assets/characters/Josias-Martelo-2.png";
 
-
-
 import slimeSprite from "@/assets/sprite-slime.png";
 import batSprite from "@/assets/sprite-bat.png";
 import bossSprite from "@/assets/sprite-boss.png";
 import crossbowSprite from "@/assets/sprite-crossbow.png";
 import arrowSprite from "@/assets/sprite-arrow.png";
-import silverProjectileSprite from "@/assets/projetil-prata.webp";
+import silverProjectileSprite from "@/assets/projetil-dourado.webp";
 import goldenProjectileSprite from "@/assets/projetil-dourado.webp";
 
 export type WeaponKind = "melee" | "bow";
