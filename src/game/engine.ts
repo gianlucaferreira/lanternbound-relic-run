@@ -652,6 +652,12 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       }
     });
     list.sort((a, b) => a.d - b.d).forEach((x) => x.draw());
+    // Bring the upper wall faces in front of entities, matching the foreground
+    // depth used by the doors mounted on those walls.
+    for (let k = 0; k < W; k++) {
+      wallSeg(iso(k, 0), iso(k + 1, 0), SPR.wallTile, k % 2 ? "#3a3440" : "#423b49");
+      wallSeg(iso(0, k), iso(0, k + 1), SPR.wallTileSide, k % 2 ? "#2c2731" : "#332d39");
+    }
     // Draw doors over the entities so they stay in front of characters.
     if (door(0)) drawDoor(0, 5.5, 0);
     if (door(1)) drawDoor(1, W - 0.8 + 1.1, 5.8);
