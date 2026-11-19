@@ -11,11 +11,14 @@ import relicItemSrc from "@/assets/sprite-cafe.png";
 import guizoItemSrc from "@/assets/Guizo.png";
 import lupaItemSrc from "@/assets/lupa.png";
 import stairItemSrc from "@/assets/sprite-escada.png";
-import doorSrc from "@/assets/sprite-porta.png";
-import bossDoorSrc from "@/assets/sprite-porta-boss.png";
-import reversedDoorSrc from "@/assets/sprite-porta-2.png";
-import reversedBossDoorSrc from "@/assets/sprite-porta-boss-2.png";
-
+import doorSrc from "@/assets/sprite-porta-fechada.png";
+import openDoorSrc from "@/assets/sprite-porta-aberta.png";
+import bossDoorSrc from "@/assets/sprite-porta-boss-fechada.png";
+import openBossDoorSrc from "@/assets/sprite-porta-boss-aberta.png";
+import reversedDoorSrc from "@/assets/sprite-porta-2-fechada.png";
+import openReversedDoorSrc from "@/assets/sprite-porta-2-aberta.png";
+import reversedBossDoorSrc from "@/assets/sprite-porta-boss-2-fechada.png";
+import openReversedBossDoorSrc from "@/assets/sprite-porta-boss-2-aberta.png";
 
 import attackCursorSrc from "@/assets/sprite-attack-cursor.png";
 import swordSlashFrameOneSrc from "@/assets/sprite-corte.png";
@@ -68,9 +71,13 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     relicItem: mkImg(relicItemSrc),
     stairItem: mkImg(stairItemSrc),
     door: mkImg(doorSrc),
+    openDoor: mkImg(openDoorSrc),
     bossDoor: mkImg(bossDoorSrc),
+    openBossDoor: mkImg(openBossDoorSrc),
     reversedDoor: mkImg(reversedDoorSrc),
+    openReversedDoor: mkImg(openReversedDoorSrc),
     reversedBossDoor: mkImg(reversedBossDoorSrc),
+    openReversedBossDoor: mkImg(openReversedBossDoorSrc),
     guizoItem: mkImg(guizoItemSrc),
     lupaItem: mkImg(lupaItemSrc),
     attackCursor: mkImg(attackCursorSrc),
@@ -448,9 +455,14 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       const nextRoom = rooms.get(key(room.gx + dx, room.gy + dy));
       if (!nextRoom) return;
       const reversed = dir === 0 || dir === 2;
+      const open = mode === "dungeon" && room.cleared;
       const sprite = reversed
-        ? nextRoom.kind === "boss" ? SPR.reversedBossDoor : SPR.reversedDoor
-        : nextRoom.kind === "boss" ? SPR.bossDoor : SPR.door;
+        ? nextRoom.kind === "boss"
+          ? open ? SPR.openReversedBossDoor : SPR.reversedBossDoor
+          : open ? SPR.openReversedDoor : SPR.reversedDoor
+        : nextRoom.kind === "boss"
+          ? open ? SPR.openBossDoor : SPR.bossDoor
+          : open ? SPR.openDoor : SPR.door;
       if (!sprite.complete || !sprite.naturalWidth) return;
       const [sx, sy] = iso(x, y);
       // Keep the sprite upright and align its base with the doorway on the room edge.
