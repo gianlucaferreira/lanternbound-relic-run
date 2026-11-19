@@ -510,7 +510,14 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       ctx.translate(sx, sy);
       ctx.drawImage(sprite, -width / 2, -height, width, height);
       ctx.restore();
-    }; SaladIcon
+    };
+    const doorsOpen = mode === "dungeon" && room.cleared;
+    const drawConnectedDoors = () => {
+      if (door(0)) drawDoor(0, 5.5, 0);
+      if (door(1)) drawDoor(1, W - 0.8 + 1.1, 5.8);
+      if (door(2)) drawDoor(2, 5.8, W + 0.2);
+      if (door(3)) drawDoor(3, 0, 5.5);
+    };
     // Wall lamps
     for (const [x, y] of [[2.5, 0], [8.5, 0], [0, 2.5], [0, 8.5]] as [number, number][]) {
       const [sx, sy] = iso(x, y); const f = 0.7;
@@ -526,6 +533,8 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         ctx.drawImage(lamp, sx - width / 2, sy - height - 16, width, height);
       }
     }
+    // Closed doors stay behind entities. Open doors are redrawn in front below.
+    if (!doorsOpen) drawConnectedDoors();
     // entities sorted by depth
     type D = { d: number; draw: () => void };
     const list: D[] = [];
@@ -652,17 +661,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       }
     });
     list.sort((a, b) => a.d - b.d).forEach((x) => x.draw());
-    // Bring the upper wall faces in front of entities, matching the foreground
-    // depth used by the doors mounted on those walls.
-    for (let k = 0; k < W; k++) {
-      wallSeg(iso(k, 0), iso(k + 1, 0), SPR.wallTile, k % 2 ? "#3a3440" : "#423b49");
-      wallSeg(iso(0, k), iso(0, k + 1), SPR.wallTileSide, k % 2 ? "#2c2731" : "#332d39");
-    }
-    // Draw doors over the entities so they stay in front of characters.
-    if (door(0)) drawDoor(0, 5.5, 0);
-    if (door(1)) drawDoor(1, W - 0.8 + 1.1, 5.8);
-    if (door(2)) drawDoor(2, 5.8, W + 0.2);
-    if (door(3)) drawDoor(3, 0, 5.5);
+    if (doorsOpen) drawConnectedDoors();
     // The reference map is only used in dungeon mode; keep it clear of the HUD.
     if (mode === "dungeon") {
       const ms = 14, margin = 20, padding = 8;
