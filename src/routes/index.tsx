@@ -35,14 +35,13 @@ function Menu() {
           <div className="menu-title-wrap">
             <h1 className="font-title text-4xl tracking-widest text-primary text-center">Projeto <strong className="text-red-600">Shudarga</strong> <br /> <span className="font-sans">A Busca por Café</span></h1>
           </div>
-          <button className="menu-coffee waves-menu-button cursor-not-allowed" disabled aria-label="Iniciar modo Waves">
+          <button className="menu-coffee waves-menu-button" disabled aria-label="Iniciar modo Waves">
             <span className="coffee-spark spark-one">✧</span>
             <img src={maskSrc} alt="" />
             <span className="waves-menu-label">MULTIJOGADOR
               {/* <span className="coming-soon text-xs">EM BREVE</span> */}
             </span>
-            {/* <span className="coffee-spark spark-two">✦</span> */}
-            {/* <span className="coming-soon">EM BREVE</span> */}
+            <span className="coffee-spark spark-two">✦</span>
           </button>
         </header>
 

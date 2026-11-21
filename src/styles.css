@@ -279,7 +279,7 @@
   z-index: 2;
   padding: 0;
   color: inherit;
-  cursor: pointer;
+  cursor: not-allowed;
   transition: transform .18s, border-color .18s, background .18s;
 }
 
