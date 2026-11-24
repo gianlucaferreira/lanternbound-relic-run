@@ -410,7 +410,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       if (it.kind === "boots") { p.spd += 0.6; say("Botas ligeiras! Velocidade +"); }
       if (it.kind === "potion") { const healed = Math.min(HEAL_AMOUNT, p.maxHp - p.hp); p.hp += healed; say(`Poção! +${healed} de vida`); }
       if (it.kind === "bow") {
-        if (!p.hasSecondaryWeapon && selectedCharacter.id === "josias") {
+        if (!p.hasSecondaryWeapon && (selectedCharacter.id === "jeff" || selectedCharacter.id === "josias")) {
           p.hasSecondaryWeapon = true;
           say(`${selectedCharacter.weaponLabels.bow} desbloqueado! Pressione Q para trocar de arma.`);
         } else {
@@ -511,12 +511,13 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       ctx.drawImage(sprite, -width / 2, -height, width, height);
       ctx.restore();
     };
-    const doorsOpen = mode === "dungeon" && room.cleared;
-    const drawConnectedDoors = () => {
+    const drawWallDoors = () => {
       if (door(0)) drawDoor(0, 5.5, 0);
+      if (door(3)) drawDoor(3, 0, 5.5);
+    };
+    const drawLowerDoors = () => {
       if (door(1)) drawDoor(1, W - 0.8 + 1.1, 5.8);
       if (door(2)) drawDoor(2, 5.8, W + 0.2);
-      if (door(3)) drawDoor(3, 0, 5.5);
     };
     // Wall lamps
     for (const [x, y] of [[2.5, 0], [8.5, 0], [0, 2.5], [0, 8.5]] as [number, number][]) {
@@ -533,8 +534,8 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         ctx.drawImage(lamp, sx - width / 2, sy - height - 16, width, height);
       }
     }
-    // Closed doors stay behind entities. Open doors are redrawn in front below.
-    if (!doorsOpen) drawConnectedDoors();
+    // Doors on the back walls stay behind entities; lower doors are drawn in front below.
+    drawWallDoors();
     // entities sorted by depth
     type D = { d: number; draw: () => void };
     const list: D[] = [];
@@ -661,7 +662,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       }
     });
     list.sort((a, b) => a.d - b.d).forEach((x) => x.draw());
-    if (doorsOpen) drawConnectedDoors();
+    drawLowerDoors();
     // The reference map is only used in dungeon mode; keep it clear of the HUD.
     if (mode === "dungeon") {
       const ms = 14, margin = 20, padding = 8;
