@@ -467,17 +467,32 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     ox = cw / (2 * sceneScale); oy = ch / (2 * sceneScale) - (W * TH) / 2 + 20;
     const boss = room.kind === "boss";
     // floor
+    // Paint a continuous base first so sub-pixel seams between transformed
+    // canvas tiles reveal the floor color instead of the scene background.
+    const floorBase = [iso(0, 0), iso(W, 0), iso(W, W), iso(0, W)] as [number, number][];
+    poly(floorBase, boss ? "#462624" : "#3a363e");
     for (let i = 0; i < W; i++) for (let j = 0; j < W; j++) {
       const shade = ((i * 7 + j * 13 + room.gx * 3 + room.gy * 5) % 5) * 4;
       const base = boss ? [70 + shade, 38 + shade / 2, 36] : [58 + shade, 54 + shade, 62 + shade];
       const tile = [iso(i, j), iso(i + 1, j), iso(i + 1, j + 1), iso(i, j + 1)] as [number, number][];
-      if (texturedQuad(boss ? SPR.bossFloorTile : SPR.floorTile, tile)) {
-        poly(tile, "rgba(0,0,0,0)", "rgba(0,0,0,0.22)");
-      } else poly(tile, `rgb(${base})`, "rgba(0,0,0,0.35)");
+      if (!texturedQuad(boss ? SPR.bossFloorTile : SPR.floorTile, tile)) poly(tile, `rgb(${base})`);
     }
     // back walls (top-left: x=0, top-right: y=0)
+    const wallBackplate = (a: [number, number], b: [number, number]) => {
+      poly([a, b, [b[0], b[1] - WALL], [a[0], a[1] - WALL]], "#38323b");
+    };
+    wallBackplate(iso(0, 0), iso(W, 0));
+    wallBackplate(iso(0, 0), iso(0, W));
     const wallSeg = (a: [number, number], b: [number, number], image: HTMLImageElement, col: string) => {
-      const face = [a, b, [b[0], b[1] - WALL], [a[0], a[1] - WALL]] as [number, number][];
+      // Overlap adjacent wall sprites slightly along the wall. Their exact
+      // shared edge can otherwise leave a one-pixel antialiasing gap.
+      const dx = b[0] - a[0], dy = b[1] - a[1];
+      const length = Math.hypot(dx, dy);
+      const overlap = 1.5;
+      const ux = (dx / length) * overlap, uy = (dy / length) * overlap;
+      const start: [number, number] = [a[0] - ux, a[1] - uy + 1];
+      const end: [number, number] = [b[0] + ux, b[1] + uy + 1];
+      const face = [start, end, [end[0], end[1] - WALL], [start[0], start[1] - WALL]] as [number, number][];
       if (!texturedWall(image, face)) poly(face, col, "rgba(0,0,0,0.5)");
     };
     for (let k = 0; k < W; k++) {
