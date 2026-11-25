@@ -185,7 +185,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       return;
     }
     if (paused) return;
-    if (k === "t" && mode === "waves") {
+    if (k === "t" || k === "x" && mode === "waves") {
       e.preventDefault();
       if (!e.repeat) skipWave();
       return;
