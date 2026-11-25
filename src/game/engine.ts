@@ -22,6 +22,8 @@ import openReversedBossDoorSrc from "@/assets/sprite-porta-boss-aberta.png";
 import wallTileSrc from "@/assets/sprite-parede.png";
 import floorTileSrc from "@/assets/sprite-chao-madeira.png";
 import bossFloorTileSrc from "@/assets/sprite-chao-boss.png";
+import orkCrouchedSrc from "@/assets/ork-agachado.png";
+import orkJumpingSrc from "@/assets/ork-pulando.png";
 
 import lampOneSrc from "@/assets/sprite-lampada-1.png";
 import lampTwoSrc from "@/assets/sprite-lampada-2.png";
@@ -75,6 +77,9 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     slime: mkImg(ENEMIES.slime.sprite),
     bat: mkImg(ENEMIES.bat.sprite),
     boss: mkImg(ENEMIES.boss.sprite),
+    ork: mkImg(ENEMIES.ork.sprite),
+    orkCrouched: mkImg(orkCrouchedSrc),
+    orkJumping: mkImg(orkJumpingSrc),
     playerProjectile: mkImg(selectedCharacter.id === "kaya" ? CHARACTER_SPRITES.goldenProjectile : WEAPONS.bow.projectile),
     projectile: mkImg(CHARACTER_SPRITES.goldenProjectile),
     potion: mkImg(potionSrc),
@@ -121,9 +126,11 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     const enemies: Enemy[] = [];
     if (kind === "normal") {
       const n = 2 + Math.floor(Math.random() * 3);
+      const includeOrk = mode === "dungeon" && dungeonPhase >= 3 && Math.random() < 0.3;
       for (let i = 0; i < n; i++) {
-        const bat = Math.random() < 0.4;
-        const enemy = createEnemy(bat ? "bat" : "slime", rnd(2, 9), rnd(2, 6));
+        const ork = includeOrk && i === n - 1;
+        const bat = !ork && Math.random() < 0.4;
+        const enemy = createEnemy(ork ? "ork" : bat ? "bat" : "slime", rnd(2, 9), rnd(2, 6));
         enemy.shotCd = bat ? rnd(0.7, 1.5) : 0;
         enemies.push(enemy);
       }
@@ -317,6 +324,26 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     for (const e of room.enemies) {
       e.hit -= dt;
       const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1;
+      if (e.kind === "ork") {
+        e.attackT = (e.attackT ?? 0) + dt;
+        // Telegraph with a crouch, then leap toward the player's position.
+        if (e.attackT >= 3.2 && e.attackT < 3.8 && e.jumpDx === undefined) {
+          e.jumpDx = Math.max(-1, Math.min(1, dx / d)) * 3.5;
+          e.jumpDy = Math.max(-1, Math.min(1, dy / d)) * 3.5;
+          e.jumpX = e.x; e.jumpY = e.y;
+        }
+        if (e.attackT >= 3.8 && e.attackT < 4.35) {
+          e.x = (e.jumpX ?? e.x) + (e.jumpDx ?? 0) * ((e.attackT - 3.8) / 0.55);
+          e.y = (e.jumpY ?? e.y) + (e.jumpDy ?? 0) * ((e.attackT - 3.8) / 0.55);
+          keepEnemyInsideRoom(e);
+        }
+        if (e.attackT >= 4.35) {
+          const landingDistance = Math.hypot(p.x - e.x, p.y - e.y);
+          if (landingDistance < 1.65) hurtPlayer(2, p.x - e.x, p.y - e.y);
+          e.attackT = 0; e.jumpX = e.jumpY = e.jumpDx = e.jumpDy = undefined;
+        }
+        continue;
+      }
       if (ENEMIES[e.kind].ranged) {
         e.shotCd -= dt;
         if (e.shotCd <= 0) {
@@ -594,9 +621,17 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         const [sx, sy] = iso(e.x, e.y); const s = e.r * 40;
         const lift = e.kind === "bat" ? 16 : s * 0.7 - 8;
         shadow(sx, sy, e.kind === "slime" ? 16 : s * 0.8);
-        const img = SPR[e.kind]; const size = e.kind === "bat" ? 80 : e.kind === "slime" ? 80 : 76;
+        const jumping = e.kind === "ork" && (e.attackT ?? 0) >= 3.8;
+        const crouching = e.kind === "ork" && (e.attackT ?? 0) >= 2.2 && (e.attackT ?? 0) < 3.8;
+        const img = e.kind === "ork" ? (jumping ? SPR.orkJumping : crouching ? SPR.orkCrouched : SPR.ork) : SPR[e.kind]; const size = e.kind === "bat" ? 80 : e.kind === "slime" ? 80 : e.kind === "ork" ? 96 : 76;
         const flip = e.x - e.y > p.x - p.y;
-        const spriteY = e.kind === "bat" ? sy : sy - lift + s * 0.7;
+        const jumpProgress = jumping ? Math.max(0, Math.min(1, ((e.attackT ?? 3.8) - 3.8) / 0.55)) : 0;
+        const spriteY = e.kind === "bat" ? sy : sy - lift + s * 0.7 - (jumping ? Math.sin(jumpProgress * Math.PI) * 42 : 0);
+        if (e.kind === "ork" && (crouching || jumping)) {
+          const radius = 1.65 * TW / 2;
+          ctx.save(); ctx.globalAlpha = jumping ? 0.18 + jumpProgress * 0.2 : 0.12;
+          ctx.strokeStyle = "#ffb347"; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(sx, sy, radius, radius * 0.5, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+        }
         ctx.save(); ctx.translate(sx, spriteY); if (flip) ctx.scale(-1, 1);
         if (e.hit > 0) ctx.filter = "brightness(3)";
         if (img.complete && img.naturalWidth > 0) {

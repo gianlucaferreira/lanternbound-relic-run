@@ -21,12 +21,13 @@ export function spawnWave(room: Room, wave: number, rnd: RandomBetween, say: (me
   }
   const count = Math.min(3 + Math.floor(wave * 0.8), 18);
   for (let i = 0; i < count; i++) {
-    const bat = Math.random() < 0.35;
-    const hp = ((bat ? 2 : 4) + Math.floor(wave / 10)) * healthMultiplier;
+    const ork = wave > 20 && i % 5 === 4;
+    const bat = !ork && Math.random() < 0.35;
+    const hp = ((ork ? 12 : bat ? 2 : 4) + Math.floor(wave / 10)) * healthMultiplier;
     const [cornerX, cornerY] = corners[i % corners.length]!;
     const x = bat ? rnd(2.2, 8.8) : cornerX + rnd(-0.35, 0.35);
     const y = bat ? rnd(2.2, 8.8) : cornerY + rnd(-0.35, 0.35);
-    const enemy = createEnemy(bat ? "bat" : "slime", x, y, { hp, spd: bat ? 0 : 0.65 + wave * 0.025 });
+    const enemy = createEnemy(ork ? "ork" : bat ? "bat" : "slime", x, y, { hp, spd: bat || ork ? 0 : 0.65 + wave * 0.025 });
     enemy.shotCd = bat ? rnd(0.7, 1.5) : 0;
     room.enemies.push(enemy);
   }
