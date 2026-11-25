@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import coffeeSprite from "@/assets/sprite-cafe.png";
-import maskSrc from "@/assets/characters/Mascara.webp"
+import maskSrc from "@/assets/characters/Mascara.png"
 import { CHARACTERS, getCharacterProgress, getSelectedCharacterId } from "@/game/characters";
 import { CharacterSelectModal } from "@/components/CharacterSelectModal";
 
@@ -38,7 +38,7 @@ function Menu() {
           <button className="menu-coffee waves-menu-button" disabled aria-label="Iniciar modo Waves">
             <span className="coffee-spark spark-one">✧</span>
             <img src={maskSrc} alt="" />
-            <span className="waves-menu-label">MULTIJOGADOR
+            <span className="waves-menu-label">JESTER
               {/* <span className="coming-soon text-xs">EM BREVE</span> */}
             </span>
             <span className="coffee-spark spark-two">✦</span>
