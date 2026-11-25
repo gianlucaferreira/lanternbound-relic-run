@@ -33,7 +33,7 @@ export function generateDungeon(
   const bossRoom = rooms.get(farthest)!;
   bossRoom.kind = "boss";
   // Same boss appearance across phases, with a tougher encounter each time.
-  bossRoom.enemies = [createBoss(30 + (phase - 1) * 15, 1.7 + (phase - 1) * 0.2, 5.5, 4)];
+  bossRoom.enemies = [createEnemy(phase === 8 ? "boss" : "bishop", 5.5, 4, { hp: 30 + (phase - 1) * 15, spd: 1.7 + (phase - 1) * 0.2 })];
   bossRoom.items = [];
 }
 

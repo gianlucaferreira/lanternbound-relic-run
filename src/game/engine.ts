@@ -60,7 +60,7 @@ const RUNA_MELEE_REACH_BONUS = 0.45;
 const MAX_MELEE_REACH = 2.2;
 const BASE_DAMAGE_INVINCIBILITY_DURATION = 0.8;
 const GUIZO_DAMAGE_INVINCIBILITY_BONUS = 0.8;
-const DUNGEON_PHASE_COUNT = 3;
+const DUNGEON_PHASE_COUNT = 8;
 
 export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mode: GameMode = "dungeon", onPause?: (paused: boolean) => void, onSkipWave?: (skip: () => void) => void, character?: CharacterDefinition, progress?: CharacterProgress, onProgress?: () => void, onResumeReady?: (resume: () => void) => void) {
   const mkImg = (src: string) => { const image = new Image(); image.src = src; return image; };
@@ -79,11 +79,13 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     slime: mkImg(ENEMIES.slime.sprite),
     bat: mkImg(ENEMIES.bat.sprite),
     boss: mkImg(ENEMIES.boss.sprite),
+    bishop: mkImg(ENEMIES.bishop.sprite),
     ork: mkImg(ENEMIES.ork.sprite),
     orkCrouched: mkImg(orkCrouchedSrc),
     orkJumping: mkImg(orkJumpingSrc),
     playerProjectile: mkImg(selectedCharacter.id === "zhao" ? selectedCharacter.sprites.projectile : selectedCharacter.id === "kaya" ? CHARACTER_SPRITES.goldenProjectile : WEAPONS.bow.projectile),
     projectile: mkImg(CHARACTER_SPRITES.goldenProjectile),
+    bishopProjectile: mkImg(CHARACTER_SPRITES.crossProjectile),
     potion: mkImg(potionSrc),
     heartItem: mkImg(heartItemSrc),
     bootsItem: mkImg(bootsItemSrc),
@@ -140,7 +142,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     return { gx, gy, enemies, items: [], cleared: kind === "start", visited: kind === "start", kind };
   }
 
-  const p = { x: 5.5, y: 5.5, ...createCharacterState(selectedCharacter), hasSecondaryWeapon: selectedCharacter.id === "zhao" ? mode !== "dungeon" : !["jeff", "kaya", "josias"].includes(selectedCharacter.id) || mode !== "dungeon", fx: 0, fy: 1, atk: 0, cd: 0, inv: 0, damageInvDuration: BASE_DAMAGE_INVINCIBILITY_DURATION, meleeReachBonus: 0 };
+  const p = { x: 5.5, y: 5.5, ...createCharacterState(selectedCharacter), hasSecondaryWeapon: selectedCharacter.id === "zhao" ? mode !== "dungeon" : !["jeff", "kaya", "josias"].includes(selectedCharacter.id) || mode !== "dungeon", fx: 0, fy: 1, atk: 0, cd: 0, inv: 0, stunT: 0, bleedT: 0, damageInvDuration: BASE_DAMAGE_INVINCIBILITY_DURATION, meleeReachBonus: 0 };
   const projectiles: Projectile[] = [];
   let room = rooms.get(key(0, 0))!;
   if (selectedCharacter.id === "zhao" && mode === "waves") {
@@ -301,6 +303,11 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     if (msgT > 0) msgT -= dt;
     if (status !== "play") return;
     p.cd -= dt; p.atk -= dt; p.inv -= dt;
+    if (p.stunT > 0) p.stunT = Math.max(0, p.stunT - dt);
+    if (p.bleedT > 0) {
+      p.bleedT -= dt;
+      if (p.bleedT <= 0 && status === "play") { p.hp = Math.max(0, p.hp - 1); if (p.hp <= 0) status = "dead"; }
+    }
     // Iso-aligned input: up = toward top of screen
     let ix = 0, iy = 0;
     if (keys.has("w") || keys.has("arrowup")) { ix -= 1; iy -= 1; }
@@ -309,6 +316,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     if (keys.has("d") || keys.has("arrowright")) { ix += 1; iy -= 1; }
     const l = Math.hypot(ix, iy);
     if (l) { ix /= l; iy /= l; p.fx = ix; p.fy = iy; }
+    if (p.stunT > 0) ix = iy = 0;
     let nx = p.x + ix * p.spd * dt, ny = p.y + iy * p.spd * dt;
     const mid = (v: number) => Math.abs(v - 5.5) < 0.8;
     const open = mode === "dungeon" && room.cleared;
@@ -366,7 +374,29 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         continue;
       }
 
-      if (e.kind === "boss") {
+      if (e.kind === "bishop") {
+        // Correct inward when too far away and keep a steady orbit direction.
+        e.moveT += dt;
+        const desiredRange = 3.2;
+        const radial = Math.max(-0.85, Math.min(0.85, (d - desiredRange) * 0.9));
+        let moveX = (dx / d) * radial - (dy / d) * 0.9;
+        let moveY = (dy / d) * radial + (dx / d) * 0.9;
+        // Start steering away before reaching the walls so clamping cannot pin
+        // the bishop in a corner and stop its orbit.
+        const wallMargin = 1.6;
+        if (e.x < wallMargin) moveX += (wallMargin - e.x) * 1.5;
+        if (e.x > W - wallMargin) moveX -= (e.x - (W - wallMargin)) * 1.5;
+        if (e.y < wallMargin) moveY += (wallMargin - e.y) * 1.5;
+        if (e.y > W - wallMargin) moveY -= (e.y - (W - wallMargin)) * 1.5;
+        const moveLength = Math.hypot(moveX, moveY) || 1;
+        e.x += (moveX / moveLength) * e.spd * dt;
+        e.y += (moveY / moveLength) * e.spd * dt;
+        e.shotCd -= dt;
+        if (e.shotCd <= 0 && d > 0.01) {
+          projectiles.push({ x: e.x, y: e.y, vx: (dx / d) * 4.8, vy: (dy / d) * 4.8, life: 2.8, owner: "enemy", damage: 1, bishopCross: true });
+          e.shotCd = 1.45 + rnd(0, 0.35);
+        }
+      } else if (e.kind === "boss") {
         // Start with a sideways dodge and use broad, slower turns while closing in.
         e.moveT += dt;
         const zigzag = Math.cos(e.moveT * 4.5) * 1.5;
@@ -417,7 +447,9 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
           hit = true; break;
         }
       } else if (Math.hypot(p.x - shot.x, p.y - shot.y) < 0.42) {
+        const canApplyBishopEffect = shot.bishopCross && p.inv <= 0;
         hurtPlayer(shot.damage, shot.vx, shot.vy);
+        if (canApplyBishopEffect && status === "play") { p.stunT = 0.45; p.bleedT = 0.35; }
         hit = true;
       }
       if (hit || shot.life <= 0 || shot.x < 0.4 || shot.x > W - 0.4 || shot.y < 0.4 || shot.y > W - 0.4) projectiles.splice(i, 1);
@@ -654,8 +686,8 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
           ctx.drawImage(img, -width / 2, -height, width, height);
         }
         ctx.restore();
-        const lift2 = e.kind === "boss" ? size - s * 0.7 - 10 : 0;
-        if (e.kind === "boss") { ctx.fillStyle = "#222"; ctx.fillRect(sx - 30, sy - lift - lift2 - s - 14, 60, 6); ctx.fillStyle = "#e84a5f"; ctx.fillRect(sx - 30, sy - lift - lift2 - s - 14, 60 * (e.hp / e.max), 6); }
+        const lift2 = e.kind === "boss" || e.kind === "bishop" ? size - s * 0.7 - 10 : 0;
+        if (e.kind === "boss" || e.kind === "bishop") { ctx.fillStyle = "#222"; ctx.fillRect(sx - 30, sy - lift - lift2 - s - 14, 60, 6); ctx.fillStyle = e.kind === "bishop" ? "#a58cff" : "#e84a5f"; ctx.fillRect(sx - 30, sy - lift - lift2 - s - 14, 60 * (e.hp / e.max), 6); }
       }
     });
     for (const shot of projectiles) list.push({
@@ -667,6 +699,10 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
           const projectileSize = selectedCharacter.id === "zhao" ? 42 : 62;
           const width = spriteWidth(SPR.playerProjectile, projectileSize), height = spriteHeight(SPR.playerProjectile, projectileSize);
           ctx.scale(-1, 1); ctx.drawImage(SPR.playerProjectile, -width / 2, -height / 2, width, height); ctx.restore();
+        } else if (shot.owner === "enemy" && shot.bishopCross && SPR.bishopProjectile.complete && SPR.bishopProjectile.naturalWidth > 0) {
+          ctx.save(); ctx.translate(sx, sy - 24); ctx.rotate(Math.atan2(vy, vx));
+          const width = spriteWidth(SPR.bishopProjectile, 36), height = spriteHeight(SPR.bishopProjectile, 36);
+          ctx.drawImage(SPR.bishopProjectile, -width / 2, -height / 2, width, height); ctx.restore();
         } else if (shot.owner === "enemy" && SPR.projectile.complete && SPR.projectile.naturalWidth > 0) {
           ctx.save(); ctx.translate(sx, sy - 24); ctx.rotate(Math.atan2(vy, vx));
           const width = spriteWidth(SPR.projectile, 48), height = spriteHeight(SPR.projectile, 48);

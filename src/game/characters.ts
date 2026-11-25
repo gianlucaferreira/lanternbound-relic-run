@@ -26,6 +26,8 @@ import josiasRangedAttackSprite from "@/assets/characters/Josias-Martelo-2.png";
 import slimeSprite from "@/assets/sprite-slime.png";
 import batSprite from "@/assets/sprite-bat.png";
 import bossSprite from "@/assets/sprite-boss.png";
+import bishopSprite from "@/assets/villains/Bispo.png";
+import crossProjectileSprite from "@/assets/Cruz-projetil.png";
 import orkSprite from "@/assets/ork.png";
 import crossbowSprite from "@/assets/sprite-crossbow.png";
 import arrowSprite from "@/assets/sprite-arrow.png";
@@ -34,7 +36,7 @@ import goldenProjectileSprite from "@/assets/projetil-dourado.webp";
 
 export type WeaponKind = "melee" | "bow";
 export type CharacterId = "jeff" | "kaya" | "josias" | 'zhao' | 'kairo' | 'mister' | 'ayame';
-export type EnemyId = "slime" | "bat" | "boss" | "ork";
+export type EnemyId = "slime" | "bat" | "boss" | "bishop" | "ork";
 export type CharacterDefinition = {
   id: CharacterId;
   name: string;
@@ -82,10 +84,11 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
   slime: { id: "slime", name: "Slime", sprite: slimeSprite, hp: 4, speed: 0.65, radius: 0.33, ranged: false, contactDamage: 1 },
   bat: { id: "bat", name: "Morcego", sprite: batSprite, hp: 2, speed: 0, radius: 0.52, ranged: true, contactDamage: 1 },
   boss: { id: "boss", name: "Luke", sprite: bossSprite, hp: 30, speed: 1.7, radius: 0.5, ranged: false, contactDamage: 3 },
+  bishop: { id: "bishop", name: "O Bispo", sprite: bishopSprite, hp: 30, speed: 1.7, radius: 0.5, ranged: false, contactDamage: 1 },
   ork: { id: "ork", name: "Ork", sprite: orkSprite, hp: 12, speed: 0, radius: 0.58, ranged: false, contactDamage: 1 },
 };
 
-export const CHARACTER_SPRITES = { silverProjectile: silverProjectileSprite, goldenProjectile: goldenProjectileSprite, bookDrop: bookDropSprite };
+export const CHARACTER_SPRITES = { silverProjectile: silverProjectileSprite, goldenProjectile: goldenProjectileSprite, bookDrop: bookDropSprite, crossProjectile: crossProjectileSprite };
 
 export function createCharacterState(character: CharacterDefinition): CharacterState {
   return { hp: character.stats.hp, maxHp: character.stats.hp, dmg: character.stats.damage, spd: character.stats.speed, weapon: character.weapon, hasSecondaryWeapon: true };
