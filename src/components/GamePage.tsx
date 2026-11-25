@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { startGame, type GameMode, type HUD } from "@/game/engine";
 import potionSrc from "@/assets/sprite-potion.png";
@@ -24,6 +24,8 @@ type ItemIcon = { kind: Item['kind'], label: string, src: string }
 
 export function GamePage({ mode }: { mode: GameMode }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const joystickRef = useRef<HTMLDivElement>(null);
+  const mobileKeysRef = useRef(new Set<string>());
   const skipWaveRef = useRef<(() => void) | null>(null);
   const resumeRef = useRef<(() => void) | null>(null);
   const [hud, setHud] = useState<HUD | null>(null);
@@ -41,6 +43,39 @@ export function GamePage({ mode }: { mode: GameMode }) {
   ];
   const navigate = useNavigate();
 
+  const setMobileKey = (key: string, pressed: boolean) => {
+    const normalizedKey = key.toLowerCase();
+    const keys = mobileKeysRef.current;
+    if (pressed === keys.has(normalizedKey)) return;
+    if (pressed) keys.add(normalizedKey);
+    else keys.delete(normalizedKey);
+    window.dispatchEvent(new KeyboardEvent(pressed ? "keydown" : "keyup", { key, bubbles: true, cancelable: true }));
+  };
+
+  const updateJoystick = (event: PointerEvent<HTMLDivElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const dx = event.clientX - (bounds.left + bounds.width / 2);
+    const dy = event.clientY - (bounds.top + bounds.height / 2);
+    const threshold = bounds.width * 0.16;
+    const next = new Set<string>();
+    if (Math.abs(dx) > threshold) next.add(dx < 0 ? "a" : "d");
+    if (Math.abs(dy) > threshold) next.add(dy < 0 ? "w" : "s");
+    for (const key of ["w", "a", "s", "d"]) setMobileKey(key, next.has(key));
+    const knob = joystickRef.current?.querySelector<HTMLElement>(".mobile-joystick-knob");
+    if (knob) {
+      const distance = Math.hypot(dx, dy);
+      const maxDistance = bounds.width * 0.28;
+      const scale = distance > maxDistance ? maxDistance / distance : 1;
+      knob.style.transform = `translate(${dx * scale}px, ${dy * scale}px)`;
+    }
+  };
+
+  const resetJoystick = () => {
+    for (const key of ["w", "a", "s", "d"]) setMobileKey(key, false);
+    const knob = joystickRef.current?.querySelector<HTMLElement>(".mobile-joystick-knob");
+    if (knob) knob.style.transform = "translate(0, 0)";
+  };
+
   useEffect(() => {
     if (!ref.current) return;
     setHud(null);
@@ -51,6 +86,23 @@ export function GamePage({ mode }: { mode: GameMode }) {
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-background text-foreground">
       <canvas key={run} ref={ref} className="block h-full w-full" />
+      {hud?.status === "play" && !paused && <div className="mobile-game-controls" aria-label="Controles do jogo">
+        <div
+          ref={joystickRef}
+          className="mobile-joystick"
+          role="application"
+          aria-label="Joystick para mover o personagem"
+          onPointerDown={(event) => { event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); updateJoystick(event); }}
+          onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) updateJoystick(event); }}
+          onPointerUp={resetJoystick}
+          onPointerCancel={resetJoystick}
+          onLostPointerCapture={resetJoystick}
+        ><span className="mobile-joystick-knob" /></div>
+        <div className="mobile-action-buttons">
+          <button type="button" className="mobile-action-button" aria-label="Atacar" onPointerDown={(event) => { event.stopPropagation(); event.currentTarget.setPointerCapture(event.pointerId); setMobileKey(" ", true); }} onPointerUp={() => setMobileKey(" ", false)} onPointerCancel={() => setMobileKey(" ", false)} onClick={(event) => { if (event.detail === 0) { setMobileKey(" ", true); setMobileKey(" ", false); } }}>ATACAR</button>
+          <button type="button" className="mobile-action-button" aria-label="Trocar de arma" onPointerDown={(event) => { event.stopPropagation(); event.currentTarget.setPointerCapture(event.pointerId); }} onClick={() => { setMobileKey("q", true); setMobileKey("q", false); }}>TROCAR<br />ARMA</button>
+        </div>
+      </div>}
       <div className="pointer-events-none absolute left-5 top-4 space-y-2">
         {hud && <div className="flex space-x-2 items-center">{Array.from({ length: hud.maxHp }).map((_, i) => <img className="h-8" key={i} src={i < hud.hp ? potionSrc : potionEmptySrc} />)}</div>}
         {hud && <p className="text-sm text-primary">Arma: {character.weaponLabels[hud.weapon]}</p>}
