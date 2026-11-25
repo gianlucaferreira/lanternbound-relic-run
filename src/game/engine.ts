@@ -146,10 +146,6 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
   const p = { x: 5.5, y: 5.5, ...createCharacterState(selectedCharacter), hasSecondaryWeapon: selectedCharacter.id === "zhao" ? mode !== "dungeon" : !["jeff", "kaya", "josias"].includes(selectedCharacter.id) || mode !== "dungeon", fx: 0, fy: 1, atk: 0, cd: 0, inv: 0, stunT: 0, damageInvDuration: BASE_DAMAGE_INVINCIBILITY_DURATION, meleeReachBonus: 0 };
   const projectiles: Projectile[] = [];
   let room = rooms.get(key(0, 0))!;
-  if (selectedCharacter.id === "zhao" && mode === "waves") {
-    p.hasSecondaryWeapon = false;
-    room.items.push({ x: 6.5, y: 5.5, kind: "sword" });
-  }
   let wave = mode === "waves" ? 1 : 0;
   let waveBreak = 0;
   let msg = "Encontre o Café !";
