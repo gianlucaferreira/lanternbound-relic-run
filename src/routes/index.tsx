@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Maximize, Minimize } from "lucide-react";
 import coffeeSprite from "@/assets/sprite-cafe.png";
 import maskSrc from "@/assets/characters/Mascara.png"
 import { CHARACTERS, getCharacterProgress, getSelectedCharacterId } from "@/game/characters";
@@ -21,14 +22,34 @@ export const Route = createFileRoute("/")({
 
 function Menu() {
   const navigate = useNavigate();
+  const menuRef = useRef<HTMLElement>(null);
   const [selectedId, setSelectedId] = useState(CHARACTERS[0]!.id);
   const [selecting, setSelecting] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   useEffect(() => setSelectedId(getSelectedCharacterId()), []);
+  useEffect(() => {
+    const syncFullscreen = () => setIsFullscreen(document.fullscreenElement === menuRef.current);
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    return () => document.removeEventListener("fullscreenchange", syncFullscreen);
+  }, []);
+  const toggleFullscreen = async () => {
+    const menu = menuRef.current;
+    if (!menu) return;
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await menu.requestFullscreen();
+    } catch {
+      // Fullscreen can be unavailable in some mobile browsers.
+    }
+  };
   const character = CHARACTERS.find((candidate) => candidate.id === selectedId) ?? CHARACTERS[0]!;
   const progress = getCharacterProgress(character.id);
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-background text-foreground">
+    <main ref={menuRef} className="menu-page-shell relative h-screen w-screen overflow-hidden bg-background text-foreground">
+      <button type="button" className="mobile-fullscreen-button menu-fullscreen-button" onClick={toggleFullscreen} aria-label={isFullscreen ? "Sair da tela cheia" : "Ativar tela cheia"} title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}>
+        {isFullscreen ? <Minimize aria-hidden="true" /> : <Maximize aria-hidden="true" />}
+      </button>
       <section className="game-menu">
         <div className="menu-grain" aria-hidden="true" />
         <header className="menu-heading">

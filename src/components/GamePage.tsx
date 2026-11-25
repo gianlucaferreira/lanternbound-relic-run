@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { Maximize, Minimize } from "lucide-react";
 import { startGame, type GameMode, type HUD } from "@/game/engine";
 import potionSrc from "@/assets/sprite-potion.png";
 import potionEmptySrc from "@/assets/sprite-potion-empty.png";
@@ -30,6 +31,7 @@ export function GamePage({ mode }: { mode: GameMode }) {
   const resumeRef = useRef<(() => void) | null>(null);
   const [hud, setHud] = useState<HUD | null>(null);
   const [paused, setPaused] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [run, setRun] = useState(0);
   const [characterId] = useState(getSelectedCharacterId);
   const character = CHARACTERS.find((candidate) => candidate.id === characterId) ?? CHARACTERS[0]!;
@@ -77,6 +79,23 @@ export function GamePage({ mode }: { mode: GameMode }) {
   };
 
   useEffect(() => {
+    const syncFullscreen = () => setIsFullscreen(document.fullscreenElement === ref.current?.parentElement);
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    return () => document.removeEventListener("fullscreenchange", syncFullscreen);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    const game = ref.current?.parentElement;
+    if (!game) return;
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await game.requestFullscreen();
+    } catch {
+      // Fullscreen can be unavailable in some mobile browsers; the game still fills the viewport.
+    }
+  };
+
+  useEffect(() => {
     if (!ref.current) return;
     setHud(null);
     setPaused(false);
@@ -84,8 +103,11 @@ export function GamePage({ mode }: { mode: GameMode }) {
   }, [run, mode, character]);
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-background text-foreground">
+    <main className="game-page-shell relative h-screen w-screen overflow-hidden bg-background text-foreground">
       <canvas key={run} ref={ref} className="block h-full w-full" />
+      <button type="button" className="mobile-fullscreen-button" onClick={toggleFullscreen} aria-label={isFullscreen ? "Sair da tela cheia" : "Ativar tela cheia"} title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}>
+        {isFullscreen ? <Minimize aria-hidden="true" /> : <Maximize aria-hidden="true" />}
+      </button>
       {hud?.status === "play" && !paused && <div className="mobile-game-controls" aria-label="Controles do jogo">
         <div
           ref={joystickRef}
@@ -100,7 +122,7 @@ export function GamePage({ mode }: { mode: GameMode }) {
         ><span className="mobile-joystick-knob" /></div>
         <div className="mobile-action-buttons">
           <button type="button" className="mobile-action-button" aria-label="Atacar" onPointerDown={(event) => { event.stopPropagation(); event.currentTarget.setPointerCapture(event.pointerId); setMobileKey(" ", true); }} onPointerUp={() => setMobileKey(" ", false)} onPointerCancel={() => setMobileKey(" ", false)} onClick={(event) => { if (event.detail === 0) { setMobileKey(" ", true); setMobileKey(" ", false); } }}>ATACAR</button>
-          <button type="button" className="mobile-action-button" aria-label="Trocar de arma" onPointerDown={(event) => { event.stopPropagation(); event.currentTarget.setPointerCapture(event.pointerId); }} onClick={() => { setMobileKey("q", true); setMobileKey("q", false); }}>TROCAR<br />ARMA</button>
+          <button type="button" className="mobile-action-button" aria-label="Trocar de arma" onPointerDown={(event) => { event.stopPropagation(); event.currentTarget.setPointerCapture(event.pointerId); setMobileKey("q", true); setMobileKey("q", false); }} onClick={(event) => { if (event.detail === 0) { setMobileKey("q", true); setMobileKey("q", false); } }}>TROCAR<br />ARMA</button>
         </div>
       </div>}
       <div className="pointer-events-none absolute left-5 top-4 space-y-2">
