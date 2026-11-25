@@ -142,7 +142,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     return { gx, gy, enemies, items: [], cleared: kind === "start", visited: kind === "start", kind };
   }
 
-  const p = { x: 5.5, y: 5.5, ...createCharacterState(selectedCharacter), hasSecondaryWeapon: selectedCharacter.id === "zhao" ? mode !== "dungeon" : !["jeff", "kaya", "josias"].includes(selectedCharacter.id) || mode !== "dungeon", fx: 0, fy: 1, atk: 0, cd: 0, inv: 0, stunT: 0, bleedT: 0, damageInvDuration: BASE_DAMAGE_INVINCIBILITY_DURATION, meleeReachBonus: 0 };
+  const p = { x: 5.5, y: 5.5, ...createCharacterState(selectedCharacter), hasSecondaryWeapon: selectedCharacter.id === "zhao" ? mode !== "dungeon" : !["jeff", "kaya", "josias"].includes(selectedCharacter.id) || mode !== "dungeon", fx: 0, fy: 1, atk: 0, cd: 0, inv: 0, stunT: 0, damageInvDuration: BASE_DAMAGE_INVINCIBILITY_DURATION, meleeReachBonus: 0 };
   const projectiles: Projectile[] = [];
   let room = rooms.get(key(0, 0))!;
   if (selectedCharacter.id === "zhao" && mode === "waves") {
@@ -304,10 +304,6 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     if (status !== "play") return;
     p.cd -= dt; p.atk -= dt; p.inv -= dt;
     if (p.stunT > 0) p.stunT = Math.max(0, p.stunT - dt);
-    if (p.bleedT > 0) {
-      p.bleedT -= dt;
-      if (p.bleedT <= 0 && status === "play") { p.hp = Math.max(0, p.hp - 1); if (p.hp <= 0) status = "dead"; }
-    }
     // Iso-aligned input: up = toward top of screen
     let ix = 0, iy = 0;
     if (keys.has("w") || keys.has("arrowup")) { ix -= 1; iy -= 1; }
@@ -449,7 +445,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       } else if (Math.hypot(p.x - shot.x, p.y - shot.y) < 0.42) {
         const canApplyBishopEffect = shot.bishopCross && p.inv <= 0;
         hurtPlayer(shot.damage, shot.vx, shot.vy);
-        if (canApplyBishopEffect && status === "play") { p.stunT = 0.45; p.bleedT = 0.35; }
+        if (canApplyBishopEffect && status === "play") p.stunT = 1.25;
         hit = true;
       }
       if (hit || shot.life <= 0 || shot.x < 0.4 || shot.x > W - 0.4 || shot.y < 0.4 || shot.y > W - 0.4) projectiles.splice(i, 1);
