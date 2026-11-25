@@ -24,6 +24,8 @@ import floorTileSrc from "@/assets/sprite-chao-madeira.png";
 import bossFloorTileSrc from "@/assets/sprite-chao-boss.png";
 import orkCrouchedSrc from "@/assets/ork-agachado.png";
 import orkJumpingSrc from "@/assets/ork-pulando.png";
+import knifeItemSrc from "@/assets/faca-zhao.png";
+import bookDropSrc from "@/assets/livro-drop.png";
 
 import lampOneSrc from "@/assets/sprite-lampada-1.png";
 import lampTwoSrc from "@/assets/sprite-lampada-2.png";
@@ -80,7 +82,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     ork: mkImg(ENEMIES.ork.sprite),
     orkCrouched: mkImg(orkCrouchedSrc),
     orkJumping: mkImg(orkJumpingSrc),
-    playerProjectile: mkImg(selectedCharacter.id === "kaya" ? CHARACTER_SPRITES.goldenProjectile : WEAPONS.bow.projectile),
+    playerProjectile: mkImg(selectedCharacter.id === "zhao" ? selectedCharacter.sprites.projectile : selectedCharacter.id === "kaya" ? CHARACTER_SPRITES.goldenProjectile : WEAPONS.bow.projectile),
     projectile: mkImg(CHARACTER_SPRITES.goldenProjectile),
     potion: mkImg(potionSrc),
     heartItem: mkImg(heartItemSrc),
@@ -103,9 +105,9 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
   };
   const ITEM_SPRITES: Record<Item["kind"], HTMLImageElement> = {
     heart: SPR.heartItem,
-    sword: mkImg(selectedCharacter.id === "kaya" ? scytheItemSrc : selectedCharacter.id === "josias" ? brassKnucklesItemSrc : swordItemSrc),
+    sword: mkImg(selectedCharacter.id === "zhao" ? knifeItemSrc : selectedCharacter.id === "kaya" ? scytheItemSrc : selectedCharacter.id === "josias" ? brassKnucklesItemSrc : swordItemSrc),
     boots: SPR.bootsItem,
-    bow: mkImg(selectedCharacter.id === "kaya" ? revolverItemSrc : selectedCharacter.id === "josias" ? hammerItemSrc : WEAPONS.bow.sprite),
+    bow: mkImg(selectedCharacter.id === "zhao" ? bookDropSrc : selectedCharacter.id === "kaya" ? revolverItemSrc : selectedCharacter.id === "josias" ? hammerItemSrc : WEAPONS.bow.sprite),
     potion: SPR.potion,
     relic: SPR.relicItem,
     phaseKey: SPR.stairItem,
@@ -138,9 +140,13 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     return { gx, gy, enemies, items: [], cleared: kind === "start", visited: kind === "start", kind };
   }
 
-  const p = { x: 5.5, y: 5.5, ...createCharacterState(selectedCharacter), hasSecondaryWeapon: !["jeff", "kaya", "josias"].includes(selectedCharacter.id) || mode !== "dungeon", fx: 0, fy: 1, atk: 0, cd: 0, inv: 0, damageInvDuration: BASE_DAMAGE_INVINCIBILITY_DURATION, meleeReachBonus: 0 };
+  const p = { x: 5.5, y: 5.5, ...createCharacterState(selectedCharacter), hasSecondaryWeapon: selectedCharacter.id === "zhao" ? mode !== "dungeon" : !["jeff", "kaya", "josias"].includes(selectedCharacter.id) || mode !== "dungeon", fx: 0, fy: 1, atk: 0, cd: 0, inv: 0, damageInvDuration: BASE_DAMAGE_INVINCIBILITY_DURATION, meleeReachBonus: 0 };
   const projectiles: Projectile[] = [];
   let room = rooms.get(key(0, 0))!;
+  if (selectedCharacter.id === "zhao" && mode === "waves") {
+    p.hasSecondaryWeapon = false;
+    room.items.push({ x: 6.5, y: 5.5, kind: "sword" });
+  }
   let wave = mode === "waves" ? 1 : 0;
   let waveBreak = 0;
   let msg = "Encontre o Café !";
@@ -187,7 +193,12 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     }
     e.preventDefault();
     keys.add(k);
-    if (k === "q" && !e.repeat && p.hasSecondaryWeapon) { p.weapon = p.weapon === "melee" ? "bow" : "melee"; say(`${selectedCharacter.weaponLabels[p.weapon]} equipada!`); }
+    if (k === "q" && !e.repeat && p.hasSecondaryWeapon) {
+      const wasKnife = selectedCharacter.id === "zhao" && p.weapon === "melee";
+      p.weapon = p.weapon === "melee" ? "bow" : "melee";
+      if (selectedCharacter.id === "zhao") p.spd += wasKnife ? -0.8 : 0.8;
+      say(`${selectedCharacter.weaponLabels[p.weapon]} equipada!`);
+    }
     if (k === " ") attack();
   };
   const ku = (e: KeyboardEvent) => keys.delete(e.key.toLowerCase());
@@ -209,8 +220,8 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       return;
     }
     const visitedRooms = [...rooms.values()].filter((candidate) => candidate.visited).length;
-    const secondaryWeaponDrop = selectedCharacter.id === "kaya" ? "sword" : "bow";
-    const secondaryWeaponName = selectedCharacter.id === "kaya" ? "foice" : selectedCharacter.id === "josias" ? "martelo" : "besta";
+    const secondaryWeaponDrop = selectedCharacter.id === "kaya" || selectedCharacter.id === "zhao" ? "sword" : "bow";
+    const secondaryWeaponName = selectedCharacter.id === "zhao" ? "faca" : selectedCharacter.id === "kaya" ? "foice" : selectedCharacter.id === "josias" ? "martelo" : "besta";
     completeDungeonRoom(room, visitedRooms, say, secondaryWeaponDrop, secondaryWeaponName, dungeonPhase === DUNGEON_PHASE_COUNT);
     if (Math.random() < RUNA_DROP_CHANCE) room.items.push({ x: 5.5, y: 5.5, kind: "runa" });
   }
@@ -236,15 +247,17 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     p.atk = 0.18;
     const isJosiasHammer = selectedCharacter.id === "josias" && p.weapon === "bow";
     if (p.weapon === "bow" && !isJosiasHammer) {
-      p.cd = 0.42;
-      projectiles.push({ x: p.x + p.fx * 0.45, y: p.y + p.fy * 0.45, vx: p.fx * 10, vy: p.fy * 10, life: 1.2, owner: "player", damage: p.dmg });
+      const isZhaoBook = selectedCharacter.id === "zhao";
+      p.cd = isZhaoBook ? 0.62 : 0.42;
+      const projectileSpeed = isZhaoBook ? 5.5 : 15;
+      projectiles.push({ x: p.x + p.fx * 0.45, y: p.y + p.fy * 0.45, vx: p.fx * projectileSpeed, vy: p.fy * projectileSpeed, life: 1.2, owner: "player", damage: p.dmg * (isZhaoBook ? 2 : 1), spinning: isZhaoBook });
       return;
     }
     p.cd = 0.35;
     const isJosiasPunch = selectedCharacter.id === "josias" && p.weapon === "melee";
     const baseMeleeReach = isJosiasHammer ? 1.85 : selectedCharacter.id === "kaya" ? 1.6 : selectedCharacter.id === "josias" ? 1.15 : 1.3;
     const meleeReach = isJosiasPunch ? baseMeleeReach + p.meleeReachBonus : Math.min(MAX_MELEE_REACH, baseMeleeReach + p.meleeReachBonus);
-    const meleeDamage = p.dmg + (isJosiasPunch ? 1 : 0);
+    const meleeDamage = selectedCharacter.id === "zhao" ? p.dmg * Math.max(1, p.spd / selectedCharacter.stats.speed) : p.dmg + (isJosiasPunch ? 1 : 0);
     let punchTarget: Enemy | undefined;
     let punchTargetDistance = Infinity;
     for (const e of room.enemies) {
@@ -428,11 +441,13 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       itemCounts[it.kind] += 1;
       if (it.kind === "heart") { p.maxHp += 1; p.hp = p.maxHp; say("Coração! Vida máxima +1"); }
       if (it.kind === "sword") {
-        p.dmg += 1;
-        if (!p.hasSecondaryWeapon && selectedCharacter.id === "kaya") {
+        if (!p.hasSecondaryWeapon && (selectedCharacter.id === "kaya" || selectedCharacter.id === "zhao")) {
           p.hasSecondaryWeapon = true;
           say(`${selectedCharacter.weaponLabels.melee} desbloqueada! Pressione Q para trocar de arma.`);
-        } else say(`${selectedCharacter.weaponLabels.melee} aprimorada! Dano +1`);
+        } else {
+          p.dmg += 1;
+          say(`${selectedCharacter.weaponLabels.melee} aprimorada! Dano +1`);
+        }
       }
       if (it.kind === "boots") { p.spd += 0.6; say("Botas ligeiras! Velocidade +"); }
       if (it.kind === "potion") { const healed = Math.min(HEAL_AMOUNT, p.maxHp - p.hp); p.hp += healed; say(`Poção! +${healed} de vida`); }
@@ -588,7 +603,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       d: it.kind === "phaseKey" ? p.x + p.y - 0.001 : it.x + it.y, draw: () => {
         const [sx, sy] = iso(it.x, it.y); const b = it.kind === "phaseKey" ? 0 : Math.sin(t / 250) * 4;
         if (it.kind !== "phaseKey") shadow(sx, sy, 10);
-        const size = { heart: 40, sword: 48, boots: 44, bow: 56, potion: 44, relic: 56, phaseKey: 56, guizo: 48, runa: 42 }[it.kind];
+        const size = it.kind === "sword" && selectedCharacter.id === "zhao" ? 32 : { heart: 40, sword: 48, boots: 44, bow: 56, potion: 44, relic: 56, phaseKey: 56, guizo: 48, runa: 42 }[it.kind];
         if (it.kind === "relic" || it.kind === "phaseKey") {
           // const glow = it.kind === "phaseKey" ? "70,210,255" : "255,220,90";
           // const rg = ctx.createRadialGradient(sx, sy - 24, 2, sx, sy - 24, 40); rg.addColorStop(0, `rgba(${glow},0.7)`); rg.addColorStop(1, `rgba(${glow},0)`); ctx.fillStyle = rg; ctx.fillRect(sx - 40, sy - 64, 80, 80);
@@ -648,8 +663,9 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         const [sx, sy] = iso(shot.x, shot.y);
         const [vx, vy] = [(shot.vx - shot.vy) * TW / 2, (shot.vx + shot.vy) * TH / 2];
         if (shot.owner === "player" && SPR.playerProjectile.complete && SPR.playerProjectile.naturalWidth > 0) {
-          ctx.save(); ctx.translate(sx, sy - 40); ctx.rotate(Math.atan2(vy, vx));
-          const width = spriteWidth(SPR.playerProjectile, 62), height = spriteHeight(SPR.playerProjectile, 62);
+          ctx.save(); ctx.translate(sx, sy - 40); ctx.rotate(Math.atan2(vy, vx) + (shot.spinning ? t * 0.025 : 0));
+          const projectileSize = selectedCharacter.id === "zhao" ? 42 : 62;
+          const width = spriteWidth(SPR.playerProjectile, projectileSize), height = spriteHeight(SPR.playerProjectile, projectileSize);
           ctx.scale(-1, 1); ctx.drawImage(SPR.playerProjectile, -width / 2, -height / 2, width, height); ctx.restore();
         } else if (shot.owner === "enemy" && SPR.projectile.complete && SPR.projectile.naturalWidth > 0) {
           ctx.save(); ctx.translate(sx, sy - 24); ctx.rotate(Math.atan2(vy, vx));
@@ -701,7 +717,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         ctx.save(); ctx.translate(sx, sy + 4); if (hx < -0.05) ctx.scale(-1, 1);
         const isHammerAttack = selectedCharacter.id === "josias" && p.weapon === "bow" && p.atk > 0;
         const heroSource = isHammerAttack ? selectedCharacter.sprites.rangedAttack ?? selectedCharacter.sprites.ranged : getCharacterSprite(selectedCharacter, p.weapon, p.atk > 0);
-        const heroSprite = isHammerAttack ? SPR.heroRangedAttack : heroSource === selectedCharacter.sprites.melee ? SPR.hero : heroSource === selectedCharacter.sprites.ranged ? SPR.heroRanged : SPR.heroAttack;
+        const heroSprite = isHammerAttack ? SPR.heroRangedAttack : heroSource === selectedCharacter.sprites.melee ? SPR.hero : heroSource === selectedCharacter.sprites.ranged ? SPR.heroRanged : p.weapon === "bow" ? SPR.heroRangedAttack : SPR.heroAttack;
         if (heroSprite.complete && heroSprite.naturalWidth > 0) {
           const isKayaIdleScythe = selectedCharacter.id === "kaya" && heroSource === selectedCharacter.sprites.melee;
           const height = HERO_RENDER_HEIGHT * (isKayaIdleScythe ? 1.1 : 1);

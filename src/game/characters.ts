@@ -5,6 +5,11 @@ import zhaoPortrait from "@/assets/characters/Zhao.png";
 import kairoPortrait from "@/assets/characters/Kairo.png";
 import misterPortrait from "@/assets/characters/Mister.png";
 import ayamePortrait from "@/assets/characters/Ayame.png";
+import zhaoDefaultSprite from "@/assets/characters/zhao-padrao.png";
+import zhaoKnifeSprite from "@/assets/characters/zhao-faca.png";
+import zhaoBookAttackSprite from "@/assets/characters/zhao-ataque-livro.png";
+import bookProjectileSprite from "@/assets/livro-projetil.png";
+import bookDropSprite from "@/assets/livro-drop.png";
 
 import jeffSprite from "@/assets/characters/Jeff-espada-1.png";
 import jeffAttackSprite from "@/assets/characters/Jeff-espada-2.png";
@@ -65,9 +70,8 @@ export const CHARACTERS: CharacterDefinition[] = [
   { id: "jeff", available: true, name: "JEFF JONES", title: "EXPLORADOR", weapon: "melee", weaponLabels: { melee: "LÂMINA", bow: "BESTA" }, portrait: jeffPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: jeffSprite, ranged: jeffRangedSprite, attack: jeffAttackSprite, projectile: '' } },
   { id: "kaya", available: true, name: "KAYA BRYON", title: "INVENTORA", weapon: "bow", weaponLabels: { melee: "FOICE", bow: "REVÓLVER" }, portrait: kayaPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: kayaMeleeSprite, ranged: kayaRangedSprite, attack: kayaAttackSprite, projectile: '' } },
   { id: "josias", available: true, name: "JOSIAS ESCARIOTES", title: "LUTADOR", weapon: "melee", weaponLabels: { melee: "SOCO", bow: "MARTELO" }, portrait: josiasPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: josiasSprite, ranged: josiasRangedSprite, attack: josiasAttackSprite, rangedAttack: josiasRangedAttackSprite, projectile: '' } },
+  { id: 'zhao', available: true, name: 'ZHAO YING YUE', title: "REPÓRTER", weapon: 'bow', weaponLabels: { melee: 'FACA', bow: 'LIVRO' }, portrait: zhaoPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: zhaoKnifeSprite, ranged: zhaoDefaultSprite, attack: zhaoKnifeSprite, rangedAttack: zhaoBookAttackSprite, projectile: bookProjectileSprite } },
 
-
-  { id: 'zhao', available: false, name: 'ZHAO YING YUE', title: "REPORTER", weapon: 'melee', weaponLabels: { melee: 'CALMA', bow: 'CALMA' }, portrait: zhaoPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: josiasSprite, ranged: josiasRangedSprite, attack: josiasAttackSprite, projectile: '' } },
   { id: 'kairo', available: false, name: 'KAIRO HENRIQUE ARMANDO FILHO', title: "PROGRAMADOR", weapon: 'melee', weaponLabels: { melee: 'CALMA', bow: 'CALMA' }, portrait: kairoPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: josiasSprite, ranged: josiasRangedSprite, attack: josiasAttackSprite, projectile: '' } },
   { id: 'mister', available: false, name: 'MISTER M', title: "ILUSIONISTA", weapon: 'melee', weaponLabels: { melee: 'CALMA', bow: 'CALMA' }, portrait: misterPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: josiasSprite, ranged: josiasRangedSprite, attack: josiasAttackSprite, projectile: '' } },
   { id: 'ayame', available: false, name: 'AYAME KURENAI', title: "ARTISTA", weapon: 'bow', weaponLabels: { melee: 'CALMA', bow: 'CALMA' }, portrait: ayamePortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: josiasSprite, ranged: josiasRangedSprite, attack: josiasAttackSprite, projectile: '' } },
@@ -81,7 +85,7 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
   ork: { id: "ork", name: "Ork", sprite: orkSprite, hp: 12, speed: 0, radius: 0.58, ranged: false, contactDamage: 1 },
 };
 
-export const CHARACTER_SPRITES = { silverProjectile: silverProjectileSprite, goldenProjectile: goldenProjectileSprite };
+export const CHARACTER_SPRITES = { silverProjectile: silverProjectileSprite, goldenProjectile: goldenProjectileSprite, bookDrop: bookDropSprite };
 
 export function createCharacterState(character: CharacterDefinition): CharacterState {
   return { hp: character.stats.hp, maxHp: character.stats.hp, dmg: character.stats.damage, spd: character.stats.speed, weapon: character.weapon, hasSecondaryWeapon: true };
@@ -95,7 +99,7 @@ export function createEnemy(id: EnemyId, x: number, y: number, overrides: Partia
 
 export function getCharacterSprite(character: CharacterDefinition | undefined, weapon: WeaponKind, attacking = false): string {
   const selected = character ?? CHARACTERS[0]!;
-  if (weapon === "bow") return selected.sprites.ranged;
+  if (weapon === "bow") return attacking ? selected.sprites.rangedAttack ?? selected.sprites.ranged : selected.sprites.ranged;
   return attacking ? selected.sprites.attack : selected.sprites.melee;
 }
 

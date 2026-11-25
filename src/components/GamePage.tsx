@@ -14,6 +14,8 @@ import speedItemSrc from "@/assets/spirte-indicador-velocidade.png";
 import relicItemSrc from "@/assets/sprite-cafe.png";
 import guizoItemSrc from "@/assets/Guizo.png";
 import lupasItemSrc from "@/assets/lupa.png";
+import knifeItemSrc from "@/assets/faca-zhao.png";
+import bookDropSrc from "@/assets/livro-drop.png";
 
 import { CHARACTERS, awardCharacterXp, getCharacterProgress, getSelectedCharacterId } from "@/game/characters";
 import { Item } from "@/game/types";
@@ -31,9 +33,9 @@ export function GamePage({ mode }: { mode: GameMode }) {
   const character = CHARACTERS.find((candidate) => candidate.id === characterId) ?? CHARACTERS[0]!;
   const itemIcons: ItemIcon[] = [
     { kind: "heart", label: "Coração", src: heartItemSrc },
-    { kind: "sword", label: "Arma corpo a corpo", src: character.id === "kaya" ? scytheItemSrc : character.id === "josias" ? brassKnucklesItemSrc : swordItemSrc },
+    { kind: "sword", label: "Arma corpo a corpo", src: character.id === "zhao" ? knifeItemSrc : character.id === "kaya" ? scytheItemSrc : character.id === "josias" ? brassKnucklesItemSrc : swordItemSrc },
     { kind: "boots", label: "Velocidade", src: speedItemSrc },
-    { kind: "bow", label: "Arma à distância", src: character.id === "kaya" ? revolverItemSrc : character.id === "josias" ? hammerItemSrc : crossbowItemSrc },
+    { kind: "bow", label: "Arma à distância", src: character.id === "zhao" ? bookDropSrc : character.id === "kaya" ? revolverItemSrc : character.id === "josias" ? hammerItemSrc : crossbowItemSrc },
     { kind: "guizo", label: "Guizo", src: guizoItemSrc },
     { kind: "runa", label: "Runa", src: lupasItemSrc },
   ];
