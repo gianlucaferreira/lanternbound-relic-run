@@ -117,6 +117,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     runa: SPR.lupaItem,
   };
   const ctx = canvas.getContext("2d")!;
+  const mobileMessageQuery = window.matchMedia("(max-width: 1024px), (hover: none) and (pointer: coarse)");
   const rooms = new Map<string, Room>();
   const itemCounts: HUD["itemCounts"] = { heart: 0, sword: 0, boots: 0, bow: 0, potion: 0, relic: 0, guizo: 0, runa: 0 };
   let dungeonPhase = 1;
@@ -209,6 +210,14 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
   canvas.addEventListener("pointerdown", click);
 
   function say(m: string) { msg = m; msgT = 3; }
+  function sayItemPickup(m: string) {
+    if (mobileMessageQuery.matches) {
+      msg = "";
+      msgT = 0;
+      return;
+    }
+    say(m);
+  }
   function keepEnemyInsideRoom(enemy: Enemy) {
     enemy.x = Math.max(enemy.r, Math.min(W - enemy.r, enemy.x));
     enemy.y = Math.max(enemy.r, Math.min(W - enemy.r, enemy.y));
@@ -463,32 +472,32 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         p.x = 5.5;
         p.y = 5.5;
         projectiles.length = 0;
-        say(`Fase ${dungeonPhase} de ${DUNGEON_PHASE_COUNT}! Um novo guardião aguarda.`);
+        sayItemPickup(`Fase ${dungeonPhase} de ${DUNGEON_PHASE_COUNT}! Um novo guardião aguarda.`);
         return false;
       }
       itemCounts[it.kind] += 1;
-      if (it.kind === "heart") { p.maxHp += 1; p.hp = p.maxHp; say("Coração! Vida máxima +1"); }
+      if (it.kind === "heart") { p.maxHp += 1; p.hp = p.maxHp; sayItemPickup("Coração! Vida máxima +1"); }
       if (it.kind === "sword") {
         if (!p.hasSecondaryWeapon && (selectedCharacter.id === "kaya" || selectedCharacter.id === "zhao")) {
           p.hasSecondaryWeapon = true;
-          say(`${selectedCharacter.weaponLabels.melee} desbloqueada! Pressione Q para trocar de arma.`);
+          sayItemPickup(`${selectedCharacter.weaponLabels.melee} desbloqueada! Pressione Q para trocar de arma.`);
         } else {
           p.dmg += 1;
-          say(`${selectedCharacter.weaponLabels.melee} aprimorada! Dano +1`);
+          sayItemPickup(`${selectedCharacter.weaponLabels.melee} aprimorada! Dano +1`);
         }
       }
-      if (it.kind === "boots") { p.spd += 0.6; say("Botas ligeiras! Velocidade +"); }
-      if (it.kind === "potion") { const healed = Math.min(HEAL_AMOUNT, p.maxHp - p.hp); p.hp += healed; say(`Poção! +${healed} de vida`); }
+      if (it.kind === "boots") { p.spd += 0.6; sayItemPickup("Botas ligeiras! Velocidade +"); }
+      if (it.kind === "potion") { const healed = Math.min(HEAL_AMOUNT, p.maxHp - p.hp); p.hp += healed; sayItemPickup(`Poção! +${healed} de vida`); }
       if (it.kind === "bow") {
         if (!p.hasSecondaryWeapon && (selectedCharacter.id === "jeff" || selectedCharacter.id === "josias")) {
           p.hasSecondaryWeapon = true;
-          say(`${selectedCharacter.weaponLabels.bow} desbloqueado! Pressione Q para trocar de arma.`);
+          sayItemPickup(`${selectedCharacter.weaponLabels.bow} desbloqueado! Pressione Q para trocar de arma.`);
         } else {
-          p.dmg += 1; say(`${selectedCharacter.weaponLabels.bow} reforçada! Dano +1`);
+          p.dmg += 1; sayItemPickup(`${selectedCharacter.weaponLabels.bow} reforçada! Dano +1`);
         }
       }
-      if (it.kind === "guizo") { p.damageInvDuration += GUIZO_DAMAGE_INVINCIBILITY_BONUS; say("Guizo raro! Invencibilidade após dano aumentada!"); }
-      if (it.kind === "runa") { p.meleeReachBonus += RUNA_MELEE_REACH_BONUS; say("Runa do Alcance! Range das armas melee aumentado!"); }
+      if (it.kind === "guizo") { p.damageInvDuration += GUIZO_DAMAGE_INVINCIBILITY_BONUS; sayItemPickup("Guizo raro! Invencibilidade após dano aumentada!"); }
+      if (it.kind === "runa") { p.meleeReachBonus += RUNA_MELEE_REACH_BONUS; sayItemPickup("Runa do Alcance! Range das armas melee aumentado!"); }
       if (it.kind === "relic") { status = "win"; }
       return false;
     });
@@ -780,7 +789,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       }
       ctx.restore();
     }
-    if (msgT > 0) { ctx.globalAlpha = Math.min(1, msgT); ctx.fillStyle = "#f3e6c4"; ctx.font = "600 18px 'Cinzel', serif"; ctx.textAlign = "center"; ctx.fillText(msg, cw / 2, ch - 40); ctx.globalAlpha = 1; }
+    if (msgT > 0 && !mobileMessageQuery.matches) { ctx.globalAlpha = Math.min(1, msgT); ctx.fillStyle = "#f3e6c4"; ctx.font = "600 18px 'Cinzel', serif"; ctx.textAlign = "center"; ctx.fillText(msg, cw / 2, ch - 40); ctx.globalAlpha = 1; }
   }
 
   let last = performance.now(), raf = 0, hudT = 0;

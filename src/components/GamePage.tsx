@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Maximize, Minimize } from "lucide-react";
+import { Maximize, Minimize, Pause } from "lucide-react";
 import { startGame, type GameMode, type HUD } from "@/game/engine";
 import potionSrc from "@/assets/sprite-potion.png";
 import potionEmptySrc from "@/assets/sprite-potion-empty.png";
@@ -126,7 +126,7 @@ export function GamePage({ mode }: { mode: GameMode }) {
         </div>
       </div>}
       <div className="pointer-events-none absolute left-5 top-4 space-y-2">
-        {hud && <div className="flex space-x-2 items-center">{Array.from({ length: hud.maxHp }).map((_, i) => <img className="h-8" key={i} src={i < hud.hp ? potionSrc : potionEmptySrc} />)}</div>}
+        {hud && <div className="flex space-x-2 items-center">{hud.status === "play" && !paused && <button type="button" className="mobile-pause-button pointer-events-auto" aria-label="Pausar jogo" title="Pausar jogo" onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }))}><Pause aria-hidden="true" /></button>} {Array.from({ length: hud.maxHp }).map((_, i) => <img className="h-8" key={i} src={i < hud.hp ? potionSrc : potionEmptySrc} />)}</div>}
         {hud && <p className="text-sm text-primary">Arma: {character.weaponLabels[hud.weapon]}</p>}
         {hud && <p className="text-xs text-primary">{character.name} · NV. {getCharacterProgress(character.id).level}</p>}
       </div>
@@ -164,7 +164,7 @@ export function GamePage({ mode }: { mode: GameMode }) {
 
 function CounterItens({ itemIcons, hud }: { itemIcons: ItemIcon[], hud: HUD }) {
   return (
-    <div className="pointer-events-none absolute right-5 bottom-4 flex max-w-64 flex-wrap gap-x-3 gap-y-1 rounded px-2 py-1.5" aria-label="Itens coletados durante a partida">
+    <div className="mobile-item-counters pointer-events-none absolute right-5 bottom-4 flex max-w-64 flex-wrap gap-x-3 gap-y-1 rounded px-2 py-1.5" aria-label="Itens coletados durante a partida">
       {itemIcons.map(({ kind, label, src }) => <div key={kind} className="flex items-center gap-1" title={`${label}: ${hud.itemCounts[kind]}`} aria-label={`${label}: ${hud.itemCounts[kind]}`}>
         <img className="w-10 max-h-8 object-contain" src={src} alt="" />
         <span className="text-md font-title font-semibold tabular-nums text-primary">{hud.itemCounts[kind]}</span>

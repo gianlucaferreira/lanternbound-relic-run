@@ -20,6 +20,10 @@
   display: none;
 }
 
+.mobile-pause-button {
+  display: none;
+}
+
 .game-page-shell:fullscreen,
 .menu-page-shell:fullscreen {
   width: 100vw;
@@ -28,6 +32,23 @@
 }
 
 @media (max-width: 1024px), (hover: none) and (pointer: coarse) {
+  .mobile-pause-button {
+    display: grid;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    border: 1px solid rgb(255 255 255 / 45%);
+    border-radius: 9999px;
+    background: rgb(20 16 13 / 72%);
+    color: white;
+    touch-action: manipulation;
+  }
+
+  .mobile-pause-button svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
   .game-page-shell {
     height: 100vh;
     height: 100dvh;
@@ -135,6 +156,35 @@
   .mobile-fullscreen-button svg {
     width: 1.25rem;
     height: 1.25rem;
+  }
+}
+
+@media (max-width: 1024px) and (orientation: portrait), (hover: none) and (pointer: coarse) and (orientation: portrait) {
+  .mobile-item-counters {
+    right: max(1rem, env(safe-area-inset-right));
+    bottom: calc(max(6rem, calc(env(safe-area-inset-bottom) + 5rem)) + clamp(4.5rem, 20vw, 5rem) + .75rem);
+    max-width: min(16rem, 54vw);
+    gap: .3rem .5rem;
+    padding: .25rem .4rem;
+  }
+
+  .mobile-item-counters img {
+    width: 1.75rem;
+    max-height: 1.5rem;
+  }
+
+  .mobile-item-counters span {
+    font-size: .82rem;
+  }
+
+  .mobile-joystick {
+    width: clamp(6rem, 28vw, 7rem);
+  }
+
+  .mobile-action-button {
+    min-width: clamp(4.5rem, 20vw, 5rem);
+    min-height: clamp(4.5rem, 20vw, 5rem);
+    font-size: clamp(.68rem, 3vw, .88rem);
   }
 }
 
@@ -941,19 +991,19 @@
   .menu-page-shell {
     height: 100vh;
     height: 100dvh;
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
   }
 
   .menu-page-shell > .game-menu {
-    min-height: 100dvh;
-    overflow: visible;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
     padding: max(0.5rem, env(safe-area-inset-top)) 1rem max(0.5rem, env(safe-area-inset-bottom));
   }
 
   .menu-page-shell .menu-heading {
-    min-height: 6.5rem;
+    min-height: 4.5rem;
   }
 
   .menu-page-shell .menu-heading h1 {
@@ -973,7 +1023,8 @@
   }
 
   .menu-page-shell .menu-content {
-    flex: 1 0 auto;
+    min-height: 0;
+    flex: 1 1 auto;
     grid-template-columns: minmax(9rem, .78fr) minmax(14rem, 1.2fr) minmax(8rem, .68fr);
     gap: .75rem;
     padding: .4rem 0 .6rem;
@@ -1108,20 +1159,15 @@
   .menu-page-shell {
     height: 100vh;
     height: 100dvh;
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
   }
 
   .menu-page-shell > .game-menu {
     display: flex;
     height: 100%;
-    min-height: 100%;
+    min-height: 0;
     max-height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior-y: contain;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
     padding-top: max(.5rem, env(safe-area-inset-top));
     padding-bottom: max(.5rem, env(safe-area-inset-bottom));
   }
@@ -1131,7 +1177,7 @@
     grid-template-columns: minmax(0, 1fr) 3.5rem;
     gap: .35rem;
     justify-content: initial;
-    min-height: 7rem;
+    min-height: clamp(5rem, 15dvh, 7rem);
   }
 
   .menu-page-shell .menu-heading h1 {
@@ -1170,12 +1216,13 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    flex: none;
+    min-height: 0;
+    flex: 1 1 auto;
     max-width: 24rem;
-    gap: .35rem;
+    gap: clamp(.15rem, .8dvh, .35rem);
     align-items: stretch;
     margin: 0 auto;
-    padding: .35rem 0;
+    padding: clamp(.15rem, .7dvh, .35rem) 0;
   }
 
   .menu-page-shell .menu-actions {
@@ -1189,12 +1236,12 @@
   }
 
   .menu-page-shell .hero-stage {
-    height: 5rem;
+    height: clamp(3.5rem, 10dvh, 5rem);
   }
 
   .menu-page-shell .hero-stage img {
     width: auto;
-    height: 4.5rem;
+    height: clamp(3rem, 9dvh, 4.5rem);
   }
 
   .menu-page-shell .menu-section-label {
@@ -1202,13 +1249,13 @@
   }
 
   .menu-page-shell .menu-action {
-    min-height: 2.65rem;
-    margin: .2rem 0;
-    padding: .4rem .6rem;
+    min-height: clamp(2.35rem, 6dvh, 2.65rem);
+    margin: clamp(.1rem, .5dvh, .2rem) 0;
+    padding: .35rem .6rem;
   }
 
   .menu-page-shell .menu-action.primary-action {
-    min-height: 3.1rem;
+    min-height: clamp(2.7rem, 7dvh, 3.1rem);
   }
 
   .menu-page-shell .relic-card {
