@@ -27,6 +27,8 @@ import orkJumpingSrc from "@/assets/villains/Comum/ork-pulando.png";
 import knifeItemSrc from "@/assets/characters/Zhao/Itens/faca-zhao.png";
 import bookDropSrc from "@/assets/characters/Zhao/Itens/livro-drop.png";
 import eclidesCaseSrc from "@/assets/characters/Eclides/Itens/Maleta.png";
+import explosionOneSrc from "@/assets/explosao-1.png";
+import explosionTwoSrc from "@/assets/explosao-2.png";
 
 import lampOneSrc from "@/assets/mapa/sprite-lampada-1.png";
 import lampTwoSrc from "@/assets/mapa/sprite-lampada-2.png";
@@ -87,6 +89,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     orkJumping: mkImg(orkJumpingSrc),
     playerProjectile: mkImg(selectedCharacter.id === "zhao" ? selectedCharacter.sprites.projectile : selectedCharacter.id === "kaya" || selectedCharacter.id === "eclides" ? CHARACTER_SPRITES.goldenProjectile : WEAPONS.ranged.projectile),
     bombProjectile: mkImg(selectedCharacter.bombProjectile ?? WEAPONS.ranged.projectile),
+    explosions: [mkImg(explosionOneSrc), mkImg(explosionTwoSrc)],
     projectile: mkImg(CHARACTER_SPRITES.goldenProjectile),
     bishopProjectile: mkImg(CHARACTER_SPRITES.crossProjectile),
     potion: mkImg(potionSrc),
@@ -150,6 +153,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
   const p = { x: 5.5, y: 5.5, ...createCharacterState(selectedCharacter), hasSecondaryWeapon: selectedCharacter.id === "eclides" || (selectedCharacter.id === "zhao" ? mode !== "dungeon" : !["jeff", "kaya", "josias"].includes(selectedCharacter.id) || mode !== "dungeon"), fx: 0, fy: 1, atk: 0, cd: 0, inv: 0, stunT: 0, damageInvDuration: BASE_DAMAGE_INVINCIBILITY_DURATION, meleeReachBonus: 0 };
   if (selectedCharacter.id === "eclides" && mode === "dungeon") p.hasSecondaryWeapon = false;
   const projectiles: Projectile[] = [];
+  const explosions: { x: number; y: number; age: number }[] = [];
   let room = rooms.get(key(0, 0))!;
   let wave = mode === "waves" ? 1 : 0;
   let waveBreak = 0;
@@ -259,7 +263,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     p.atk = 0.18;
     if (selectedCharacter.id === "eclides" && p.weapon === "special") {
       p.cd = 0.9;
-      projectiles.push({ x: p.x + p.fx * 0.45, y: p.y + p.fy * 0.45, vx: p.fx * 5.5, vy: p.fy * 5.5, life: 0.65, owner: "player", damage: p.dmg + 2, explosive: true });
+      projectiles.push({ x: p.x + p.fx * 0.45, y: p.y + p.fy * 0.45, vx: p.fx * 5.5, vy: p.fy * 5.5, life: 0.65, flightTime: 0.65, owner: "player", damage: p.dmg + 2, explosive: true });
       return;
     }
     const isJosiasHammer = selectedCharacter.id === "josias" && p.weapon === "special";
@@ -315,6 +319,10 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
   }
 
   function update(dt: number) {
+    for (let i = explosions.length - 1; i >= 0; i--) {
+      explosions[i]!.age += dt;
+      if (explosions[i]!.age >= 0.36) explosions.splice(i, 1);
+    }
     if (msgT > 0) msgT -= dt;
     if (status !== "play") return;
     p.cd -= dt; p.atk -= dt; p.inv -= dt;
@@ -457,7 +465,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
             e.x += (shot.vx / distance) * 0.18; e.y += (shot.vy / distance) * 0.18;
             keepEnemyInsideRoom(e);
           }
-          hit = true; break;
+          if (!shot.explosive) { hit = true; break; }
         }
       } else if (Math.hypot(p.x - shot.x, p.y - shot.y) < 0.42) {
         const canApplyBishopEffect = shot.bishopCross && p.inv <= 0;
@@ -467,6 +475,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       }
       const bombDetonated = shot.explosive && (hit || shot.life <= 0 || shot.x < 0.4 || shot.x > W - 0.4 || shot.y < 0.4 || shot.y > W - 0.4);
       if (bombDetonated) {
+        explosions.push({ x: shot.x, y: shot.y, age: 0 });
         for (const enemy of room.enemies) {
           if (Math.hypot(enemy.x - shot.x, enemy.y - shot.y) > 1.7) continue;
           enemy.hp -= shot.damage;
@@ -725,7 +734,14 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         const [vx, vy] = [(shot.vx - shot.vy) * TW / 2, (shot.vx + shot.vy) * TH / 2];
         const projectileSprite = shot.explosive ? SPR.bombProjectile : SPR.playerProjectile;
         if (shot.owner === "player" && projectileSprite.complete && projectileSprite.naturalWidth > 0) {
-          ctx.save(); ctx.translate(sx, sy - 40); ctx.rotate(Math.atan2(vy, vx) + (shot.spinning ? t * 0.025 : 0));
+          if (shot.explosive) {
+            const progress = Math.max(0, Math.min(1, 1 - shot.life / (shot.flightTime ?? 0.65)));
+            const height = Math.sin(progress * Math.PI) * 58;
+            shadow(sx, sy, 10);
+            ctx.save(); ctx.translate(sx, sy - height - 22); ctx.rotate(Math.atan2(vy, vx));
+          } else {
+            ctx.save(); ctx.translate(sx, sy - 40); ctx.rotate(Math.atan2(vy, vx) + (shot.spinning ? t * 0.025 : 0));
+          }
           const projectileSize = shot.explosive ? 36 : selectedCharacter.id === "zhao" ? 42 : 62;
           const width = spriteWidth(projectileSprite, projectileSize), height = spriteHeight(projectileSprite, projectileSize);
           ctx.scale(-1, 1); ctx.drawImage(projectileSprite, -width / 2, -height / 2, width, height); ctx.restore();
@@ -737,6 +753,17 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
           ctx.save(); ctx.translate(sx, sy - 24); ctx.rotate(Math.atan2(vy, vx));
           const width = spriteWidth(SPR.projectile, 48), height = spriteHeight(SPR.projectile, 48);
           ctx.scale(-1, 1); ctx.drawImage(SPR.projectile, -width / 2, -height / 2, width, height); ctx.restore();
+        }
+      }
+    });
+    for (const explosion of explosions) list.push({
+      d: explosion.x + explosion.y + 0.001, draw: () => {
+        const [sx, sy] = iso(explosion.x, explosion.y);
+        const frame = SPR.explosions[Math.min(1, Math.floor(explosion.age / 0.18))]!;
+        const size = 112;
+        if (frame.complete && frame.naturalWidth > 0) {
+          const width = spriteWidth(frame, size), height = spriteHeight(frame, size);
+          ctx.drawImage(frame, sx - width / 2, sy - height + 8, width, height);
         }
       }
     });
