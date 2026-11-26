@@ -49,7 +49,7 @@ export function GamePage({ mode }: { mode: GameMode }) {
     { kind: "heart", label: "Coração", src: heartItemSrc },
     { kind: "sword", label: character.id === "eclides" ? "Pistola" : "Arma corpo a corpo", src: character.id === "eclides" ? eclidesPistolItemSrc : character.id === "zhao" ? knifeItemSrc : character.id === "kaya" ? scytheItemSrc : character.id === "josias" ? brassKnucklesItemSrc : swordItemSrc },
     { kind: "boots", label: "Velocidade", src: speedItemSrc },
-    { kind: "bow", label: "Arma à distância", src: character.id === "zhao" ? bookDropSrc : character.id === "kaya" ? revolverItemSrc : character.id === "josias" ? hammerItemSrc : crossbowItemSrc },
+    ...(character.id !== "eclides" ? [{ kind: "bow" as const, label: "Arma à distância", src: character.id === "zhao" ? bookDropSrc : character.id === "kaya" ? revolverItemSrc : character.id === "josias" ? hammerItemSrc : crossbowItemSrc }] : []),
     ...(character.id === "eclides" ? [{ kind: "bombCase" as const, label: "Maleta de bombas", src: eclidesBombCaseSrc }] : []),
     { kind: "guizo", label: "Guizo", src: guizoItemSrc },
     { kind: "runa", label: "Runa", src: lupasItemSrc },

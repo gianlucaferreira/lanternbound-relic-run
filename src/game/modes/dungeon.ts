@@ -37,7 +37,7 @@ export function generateDungeon(
   bossRoom.items = [];
 }
 
-export function completeDungeonRoom(room: Room, visitedRooms: number, say: (message: string) => void, secondaryWeapon: Item["kind"] = "bow", secondaryWeaponName = "besta", finalBoss = true) {
+export function completeDungeonRoom(room: Room, visitedRooms: number, say: (message: string) => void, secondaryWeapon: Item["kind"] = "bow", secondaryWeaponName = "besta", finalBoss = true, rangedDrop: Item["kind"] = "bow", rangedDropName = "besta") {
   const guaranteedSecondaryDrop = visitedRooms === 2;
   room.cleared = true;
   if (room.kind === "boss") {
@@ -51,9 +51,9 @@ export function completeDungeonRoom(room: Room, visitedRooms: number, say: (mess
     say(`Sala limpa! A ${secondaryWeaponName} garantida está no chão...`);
   } else if (Math.random() < 0.8) {
     const roll = Math.random();
-    const kind: Item["kind"] = roll < 0.4 ? "heart" : roll < 0.7 ? "sword" : roll < 0.85 ? "boots" : "bow";
+    const kind: Item["kind"] = roll < 0.4 ? "heart" : roll < 0.7 ? "sword" : roll < 0.85 ? "boots" : rangedDrop;
     room.items.push({ x: 5.5, y: 5.5, kind });
-    say(kind === "bow" ? "Sala limpa! Uma besta está no chão..." : "Sala limpa! Algo brilha no chão...");
+    say(roll >= 0.85 ? `Sala limpa! ${rangedDropName === "besta" ? "Uma besta" : `Uma ${rangedDropName}`} está no chão...` : "Sala limpa! Algo brilha no chão...");
   } else say("Sala limpa!");
 }
 

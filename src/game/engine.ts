@@ -27,6 +27,7 @@ import orkJumpingSrc from "@/assets/villains/Comum/ork-pulando.png";
 import knifeItemSrc from "@/assets/characters/Zhao/Itens/faca-zhao.png";
 import bookDropSrc from "@/assets/characters/Zhao/Itens/livro-drop.png";
 import eclidesCaseSrc from "@/assets/characters/Eclides/Itens/Maleta.png";
+import eclidesPistolItemSrc from "@/assets/characters/Eclides/Itens/Pistola.png";
 import explosionOneSrc from "@/assets/explosao-1.png";
 import explosionTwoSrc from "@/assets/explosao-2.png";
 
@@ -79,6 +80,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     heroAttack: mkImg(selectedCharacter.sprites.attack),
     heroRanged: mkImg(selectedCharacter.sprites.ranged),
     heroSpecial: mkImg(selectedCharacter.specialSprite ?? selectedCharacter.sprites.ranged),
+    heroBombThrow: mkImg(selectedCharacter.bombThrowSprite ?? selectedCharacter.sprites.ranged),
     heroRangedAttack: selectedCharacter.sprites.rangedAttack ? mkImg(selectedCharacter.sprites.rangedAttack) : mkImg(selectedCharacter.sprites.ranged),
     slime: mkImg(ENEMIES.slime.sprite),
     bat: mkImg(ENEMIES.bat.sprite),
@@ -113,7 +115,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
   };
   const ITEM_SPRITES: Record<Item["kind"], HTMLImageElement> = {
     heart: SPR.heartItem,
-    sword: mkImg(selectedCharacter.id === "zhao" ? knifeItemSrc : selectedCharacter.id === "kaya" ? scytheItemSrc : selectedCharacter.id === "josias" ? brassKnucklesItemSrc : swordItemSrc),
+    sword: mkImg(selectedCharacter.id === "eclides" ? eclidesPistolItemSrc : selectedCharacter.id === "zhao" ? knifeItemSrc : selectedCharacter.id === "kaya" ? scytheItemSrc : selectedCharacter.id === "josias" ? brassKnucklesItemSrc : swordItemSrc),
     boots: SPR.bootsItem,
     bow: mkImg(selectedCharacter.id === "zhao" ? bookDropSrc : selectedCharacter.id === "kaya" ? revolverItemSrc : selectedCharacter.id === "josias" ? hammerItemSrc : WEAPONS.ranged.sprite),
     bombCase: mkImg(eclidesCaseSrc),
@@ -230,7 +232,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
   function clearRoomIfNeeded() {
     if (room.enemies.length || room.cleared) return;
     if (mode === "waves") {
-      completeWave(room, { wave, waveBreak }, say);
+      completeWave(room, { wave, waveBreak }, say, selectedCharacter.id);
       if (Math.random() < RUNA_DROP_CHANCE) room.items.push({ x: 5.5, y: 5.5, kind: "runa" });
       waveBreak = 10;
       return;
@@ -238,7 +240,9 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     const visitedRooms = [...rooms.values()].filter((candidate) => candidate.visited).length;
     const secondaryWeaponDrop = selectedCharacter.id === "eclides" ? "bombCase" : selectedCharacter.id === "kaya" || selectedCharacter.id === "zhao" ? "sword" : "bow";
     const secondaryWeaponName = selectedCharacter.id === "eclides" ? "maleta de bombas" : selectedCharacter.id === "zhao" ? "faca" : selectedCharacter.id === "kaya" ? "foice" : selectedCharacter.id === "josias" ? "martelo" : "besta";
-    completeDungeonRoom(room, visitedRooms, say, secondaryWeaponDrop, secondaryWeaponName, dungeonPhase === DUNGEON_PHASE_COUNT);
+    const rangedDrop = selectedCharacter.id === "eclides" ? "sword" : "bow";
+    const rangedDropName = selectedCharacter.id === "eclides" ? "pistola" : "besta";
+    completeDungeonRoom(room, visitedRooms, say, secondaryWeaponDrop, secondaryWeaponName, dungeonPhase === DUNGEON_PHASE_COUNT, rangedDrop, rangedDropName);
     if (Math.random() < RUNA_DROP_CHANCE) room.items.push({ x: 5.5, y: 5.5, kind: "runa" });
   }
   function removeDefeatedEnemies() {
@@ -260,9 +264,9 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
   }
   function attack() {
     if (p.cd > 0 || status !== "play") return;
-    p.atk = 0.18;
+    p.atk = selectedCharacter.id === "eclides" && p.weapon === "special" ? 0.48 : 0.18;
     if (selectedCharacter.id === "eclides" && p.weapon === "special") {
-      p.cd = 0.9;
+      p.cd = 1.5;
       projectiles.push({ x: p.x + p.fx * 0.45, y: p.y + p.fy * 0.45, vx: p.fx * 5.5, vy: p.fy * 5.5, life: 0.65, flightTime: 0.65, owner: "player", damage: p.dmg + 2, explosive: true });
       return;
     }
@@ -810,7 +814,8 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         ctx.save(); ctx.translate(sx, sy + 4); if (hx < -0.05) ctx.scale(-1, 1);
         const isHammerAttack = selectedCharacter.id === "josias" && p.weapon === "special" && p.atk > 0;
         const heroSource = isHammerAttack ? selectedCharacter.sprites.rangedAttack ?? selectedCharacter.sprites.ranged : getCharacterSprite(selectedCharacter, p.weapon, p.atk > 0);
-        const heroSprite = isHammerAttack ? SPR.heroRangedAttack : heroSource === selectedCharacter.specialSprite ? SPR.heroSpecial : heroSource === selectedCharacter.sprites.melee ? SPR.hero : heroSource === selectedCharacter.sprites.ranged ? SPR.heroRanged : selectedCharacter.weaponStyles[p.weapon] === "ranged" ? SPR.heroRangedAttack : SPR.heroAttack;
+        const isEclidesBomb = selectedCharacter.id === "eclides" && p.weapon === "special";
+        const heroSprite = isHammerAttack ? SPR.heroRangedAttack : isEclidesBomb && p.atk > 0 ? p.atk > 0.25 ? SPR.heroRangedAttack : p.atk > 0.08 ? SPR.heroBombThrow : SPR.heroSpecial : heroSource === selectedCharacter.specialSprite ? SPR.heroSpecial : heroSource === selectedCharacter.sprites.melee ? SPR.hero : heroSource === selectedCharacter.sprites.ranged ? SPR.heroRanged : selectedCharacter.weaponStyles[p.weapon] === "ranged" ? SPR.heroRangedAttack : SPR.heroAttack;
         if (heroSprite.complete && heroSprite.naturalWidth > 0) {
           const isKayaIdleScythe = selectedCharacter.id === "kaya" && heroSource === selectedCharacter.sprites.melee;
           const height = HERO_RENDER_HEIGHT * (isKayaIdleScythe ? 1.1 : 1);

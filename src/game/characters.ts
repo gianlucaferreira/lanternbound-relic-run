@@ -9,6 +9,7 @@ import eclidesPortrait from "@/assets/characters/Eclides/Portrait/Eclides.png";
 import eclidesPistolSprite from "@/assets/characters/Eclides/Sprites/Idle-pistola.png";
 import eclidesBombSprite from "@/assets/characters/Eclides/Sprites/Idle-mina.png";
 import eclidesThrowSprite from "@/assets/characters/Eclides/Sprites/Pegando-bomba.png";
+import eclidesBombThrowSprite from "@/assets/characters/Eclides/Sprites/Jogando-bomba.png";
 import eclidesBombProjectile from "@/assets/characters/Eclides/Itens/Bomba.png";
 import zhaoDefaultSprite from "@/assets/characters/Zhao/Sprites/zhao-padrao.png";
 import zhaoKnifeSprite from "@/assets/characters/Zhao/Sprites/zhao-faca.png";
@@ -58,6 +59,7 @@ export type CharacterDefinition = {
   sprites: { melee: string; ranged: string; attack: string, rangedAttack?: string, projectile: string };
   bombProjectile?: string;
   specialSprite?: string;
+  bombThrowSprite?: string;
 };
 export type CharacterProgress = { level: number; xp: number };
 export type EnemyDefinition = {
@@ -86,7 +88,7 @@ export const CHARACTERS: CharacterDefinition[] = [
   { id: 'kairo', available: false, name: 'KAIRO HENRIQUE ARMANDO FILHO', title: "PROGRAMADOR", primaryWeapon: "CALMA", specialWeapon: "CALMA", weaponStyles: { primary: "melee", special: "ranged" }, weaponLabels: { primary: 'CALMA', special: 'CALMA' }, portrait: kairoPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: josiasSprite, ranged: josiasRangedSprite, attack: josiasAttackSprite, projectile: '' } },
   { id: 'mister', available: false, name: 'MISTER M', title: "ILUSIONISTA", primaryWeapon: "CALMA", specialWeapon: "CALMA", weaponStyles: { primary: "melee", special: "ranged" }, weaponLabels: { primary: 'CALMA', special: 'CALMA' }, portrait: misterPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: josiasSprite, ranged: josiasRangedSprite, attack: josiasAttackSprite, projectile: '' } },
   { id: 'ayame', available: false, name: 'AYAME KURENAI', title: "ARTISTA", primaryWeapon: "CALMA", specialWeapon: "CALMA", weaponStyles: { primary: "ranged", special: "melee" }, weaponLabels: { primary: 'CALMA', special: 'CALMA' }, portrait: ayamePortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: josiasSprite, ranged: josiasRangedSprite, attack: josiasAttackSprite, projectile: '' } },
-  { id: 'eclides', available: true, name: 'ECLIDES', title: "ESPECIALISTA", primaryWeapon: "PISTOLA", specialWeapon: "BOMBA", weaponStyles: { primary: "ranged", special: "ranged" }, weaponLabels: { primary: 'PISTOLA', special: 'BOMBA' }, portrait: eclidesPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: eclidesPistolSprite, ranged: eclidesPistolSprite, attack: eclidesPistolSprite, rangedAttack: eclidesThrowSprite, projectile: '' }, specialSprite: eclidesBombSprite, bombProjectile: eclidesBombProjectile },
+  { id: 'eclides', available: true, name: 'ECLIDES', title: "ESPECIALISTA", primaryWeapon: "PISTOLA", specialWeapon: "BOMBA", weaponStyles: { primary: "ranged", special: "ranged" }, weaponLabels: { primary: 'PISTOLA', special: 'BOMBA' }, portrait: eclidesPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: eclidesPistolSprite, ranged: eclidesPistolSprite, attack: eclidesPistolSprite, rangedAttack: eclidesThrowSprite, projectile: '' }, specialSprite: eclidesBombSprite, bombThrowSprite: eclidesBombThrowSprite, bombProjectile: eclidesBombProjectile },
 ];
 
 

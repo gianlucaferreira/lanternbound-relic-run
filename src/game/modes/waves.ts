@@ -34,12 +34,12 @@ export function spawnWave(room: Room, wave: number, rnd: RandomBetween, say: (me
   say(`Onda ${wave} começando!`);
 }
 
-export function completeWave(room: Room, state: WaveState, say: (message: string) => void) {
+export function completeWave(room: Room, state: WaveState, say: (message: string) => void, characterId?: string) {
   room.cleared = true;
   const healDrops = 1 + Math.floor(state.wave / 10);
   for (let i = 0; i < healDrops; i++) room.items.push({ x: 3 + i * 1.3, y: 5.5, kind: "potion" });
   const buffs = state.wave % 10 === 0 ? 2 : 1 + (state.wave % 5 === 0 ? 1 : 0);
-  const buffKinds: Item["kind"][] = ["heart", "sword", "boots", "bow"];
+  const buffKinds: Item["kind"][] = ["heart", "sword", "boots", characterId === "eclides" ? "sword" : "bow"];
   for (let i = 0; i < buffs; i++) room.items.push({ x: 4 + i * 1.2, y: 6.5, kind: buffKinds[Math.floor(Math.random() * buffKinds.length)]! });
   state.waveBreak = 10;
   say(`Onda ${state.wave} concluída! Recolha os itens. Próxima onda em breve...`);
