@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Maximize, Minimize } from "lucide-react";
-import coffeeSprite from "@/assets/sprite-cafe.png";
+import coffeeSprite from "@/assets/itens/sprite-cafe.png";
 import maskSrc from "@/assets/characters/Mascara.png"
 import { CHARACTERS, getCharacterProgress, getSelectedCharacterId } from "@/game/characters";
 import { CharacterSelectModal } from "@/components/CharacterSelectModal";
