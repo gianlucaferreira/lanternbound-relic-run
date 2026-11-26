@@ -81,7 +81,7 @@ export function GamePage({ mode }: { mode: GameMode }) {
   };
 
 
-  const weaponImage = hud?.weapon === "bow" ? mobileAttackButtonRanged : characterId === "josias" ? mobileAttackButtonJosias : mobileAttackButtonMelee
+  const weaponImage = hud && character.weaponStyles[hud.weapon] === "ranged" ? mobileAttackButtonRanged : characterId === "josias" ? mobileAttackButtonJosias : mobileAttackButtonMelee
   const resetJoystick = () => {
     for (const key of ["w", "a", "s", "d"]) setMobileKey(key, false);
     const knob = joystickRef.current?.querySelector<HTMLElement>(".mobile-joystick-knob");
@@ -141,7 +141,7 @@ export function GamePage({ mode }: { mode: GameMode }) {
       </div>}
       <div className="pointer-events-none absolute left-5 top-4 space-y-2">
         {hud && <div className="flex space-x-2 items-center">{hud.status === "play" && !paused && <button type="button" className="mobile-pause-button pointer-events-auto" aria-label="Pausar jogo" title="Pausar jogo" onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }))}> <img src={pauseButton} className="max-w-8 w-full" /> </button>} {Array.from({ length: hud.maxHp }).map((_, i) => <img className="h-8" key={i} src={i < hud.hp ? potionSrc : potionEmptySrc} />)}</div>}
-        {hud && <p className="text-sm text-primary">Arma: {character.weaponLabels[hud.weapon]}</p>}
+        {hud && <p className="text-sm text-primary">Arma {hud.weapon === "primary" ? "principal" : "especial"}: {character.weaponLabels[hud.weapon]}</p>}
         {hud && <p className="text-xs text-primary">{character.name} · NV. {getCharacterProgress(character.id).level}</p>}
       </div>
       {hud && <CounterItens itemIcons={itemIcons} hud={hud} />}

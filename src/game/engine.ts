@@ -83,7 +83,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     ork: mkImg(ENEMIES.ork.sprite),
     orkCrouched: mkImg(orkCrouchedSrc),
     orkJumping: mkImg(orkJumpingSrc),
-    playerProjectile: mkImg(selectedCharacter.id === "zhao" ? selectedCharacter.sprites.projectile : selectedCharacter.id === "kaya" ? CHARACTER_SPRITES.goldenProjectile : WEAPONS.bow.projectile),
+    playerProjectile: mkImg(selectedCharacter.id === "zhao" ? selectedCharacter.sprites.projectile : selectedCharacter.id === "kaya" ? CHARACTER_SPRITES.goldenProjectile : WEAPONS.ranged.projectile),
     projectile: mkImg(CHARACTER_SPRITES.goldenProjectile),
     bishopProjectile: mkImg(CHARACTER_SPRITES.crossProjectile),
     potion: mkImg(potionSrc),
@@ -109,7 +109,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     heart: SPR.heartItem,
     sword: mkImg(selectedCharacter.id === "zhao" ? knifeItemSrc : selectedCharacter.id === "kaya" ? scytheItemSrc : selectedCharacter.id === "josias" ? brassKnucklesItemSrc : swordItemSrc),
     boots: SPR.bootsItem,
-    bow: mkImg(selectedCharacter.id === "zhao" ? bookDropSrc : selectedCharacter.id === "kaya" ? revolverItemSrc : selectedCharacter.id === "josias" ? hammerItemSrc : WEAPONS.bow.sprite),
+    bow: mkImg(selectedCharacter.id === "zhao" ? bookDropSrc : selectedCharacter.id === "kaya" ? revolverItemSrc : selectedCharacter.id === "josias" ? hammerItemSrc : WEAPONS.ranged.sprite),
     potion: SPR.potion,
     relic: SPR.relicItem,
     phaseKey: SPR.stairItem,
@@ -193,8 +193,8 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
     e.preventDefault();
     keys.add(k);
     if (k === "q" && !e.repeat && p.hasSecondaryWeapon) {
-      const wasKnife = selectedCharacter.id === "zhao" && p.weapon === "melee";
-      p.weapon = p.weapon === "melee" ? "bow" : "melee";
+      const wasKnife = selectedCharacter.id === "zhao" && p.weapon === "special";
+      p.weapon = p.weapon === "primary" ? "special" : "primary";
       if (selectedCharacter.id === "zhao") p.spd += wasKnife ? -0.8 : 0.8;
       say(`${selectedCharacter.weaponLabels[p.weapon]} equipada!`);
     }
@@ -252,8 +252,8 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
   function attack() {
     if (p.cd > 0 || status !== "play") return;
     p.atk = 0.18;
-    const isJosiasHammer = selectedCharacter.id === "josias" && p.weapon === "bow";
-    if (p.weapon === "bow" && !isJosiasHammer) {
+    const isJosiasHammer = selectedCharacter.id === "josias" && p.weapon === "special";
+    if (selectedCharacter.weaponStyles[p.weapon] === "ranged") {
       const isZhaoBook = selectedCharacter.id === "zhao";
       p.cd = isZhaoBook ? 0.62 : 0.42;
       const projectileSpeed = isZhaoBook ? 5.5 : 15;
@@ -261,7 +261,7 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       return;
     }
     p.cd = 0.35;
-    const isJosiasPunch = selectedCharacter.id === "josias" && p.weapon === "melee";
+    const isJosiasPunch = selectedCharacter.id === "josias" && p.weapon === "primary";
     const baseMeleeReach = isJosiasHammer ? 1.85 : selectedCharacter.id === "kaya" ? 1.6 : selectedCharacter.id === "josias" ? 1.15 : 1.3;
     const meleeReach = isJosiasPunch ? baseMeleeReach + p.meleeReachBonus : Math.min(MAX_MELEE_REACH, baseMeleeReach + p.meleeReachBonus);
     const meleeDamage = selectedCharacter.id === "zhao" ? p.dmg * Math.max(1, p.spd / selectedCharacter.stats.speed) : p.dmg + (isJosiasPunch ? 1 : 0);
@@ -476,10 +476,10 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       if (it.kind === "sword") {
         if (!p.hasSecondaryWeapon && (selectedCharacter.id === "kaya" || selectedCharacter.id === "zhao")) {
           p.hasSecondaryWeapon = true;
-          sayItemPickup(`${selectedCharacter.weaponLabels.melee} desbloqueada! Pressione Q para trocar de arma.`);
+          sayItemPickup(`${selectedCharacter.weaponLabels.special} desbloqueada! Pressione Q para trocar de arma.`);
         } else {
           p.dmg += 1;
-          sayItemPickup(`${selectedCharacter.weaponLabels.melee} aprimorada! Dano +1`);
+          sayItemPickup(`${selectedCharacter.weaponLabels[(["kaya", "zhao"].includes(selectedCharacter.id) ? "special" : "primary")]} aprimorada! Dano +1`);
         }
       }
       if (it.kind === "boots") { p.spd += 0.6; sayItemPickup("Botas ligeiras! Velocidade +"); }
@@ -487,9 +487,9 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
       if (it.kind === "bow") {
         if (!p.hasSecondaryWeapon && (selectedCharacter.id === "jeff" || selectedCharacter.id === "josias")) {
           p.hasSecondaryWeapon = true;
-          sayItemPickup(`${selectedCharacter.weaponLabels.bow} desbloqueado! Pressione Q para trocar de arma.`);
+          sayItemPickup(`${selectedCharacter.weaponLabels.special} desbloqueada! Pressione Q para trocar de arma.`);
         } else {
-          p.dmg += 1; sayItemPickup(`${selectedCharacter.weaponLabels.bow} reforçada! Dano +1`);
+          p.dmg += 1; sayItemPickup(`${selectedCharacter.weaponLabels[(["jeff", "josias"].includes(selectedCharacter.id) ? "special" : "primary")]} reforçada! Dano +1`);
         }
       }
       if (it.kind === "guizo") { p.damageInvDuration += GUIZO_DAMAGE_INVINCIBILITY_BONUS; sayItemPickup("Guizo raro! Invencibilidade após dano aumentada!"); }
@@ -728,13 +728,13 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
           ctx.restore();
         }
         // Josias's punch uses a sweeping line; the hammer and other melee weapons use the shared two-frame swing.
-        const isJosiasPunch = selectedCharacter.id === "josias" && p.weapon === "melee";
-        const isMeleeAttack = p.weapon === "melee" || (selectedCharacter.id === "josias" && p.weapon === "bow");
+        const isJosiasPunch = selectedCharacter.id === "josias" && p.weapon === "primary";
+        const isMeleeAttack = selectedCharacter.weaponStyles[p.weapon] === "melee";
         if (isMeleeAttack && p.atk > 0) {
           const elapsed = 0.18 - p.atk;
           const frame = isJosiasPunch ? SPR.punchLine : SPR.swordSlashFrames[Math.min(1, Math.floor(elapsed / 0.09))]!;
           if (frame.complete && frame.naturalWidth > 0) {
-            const isJosiasHammer = selectedCharacter.id === "josias" && p.weapon === "bow";
+            const isJosiasHammer = selectedCharacter.id === "josias" && p.weapon === "special";
             const progress = Math.min(1, elapsed / 0.18);
             const josiasFacingDown = isJosiasPunch && p.fx > 0.5 && p.fy > 0.5;
             const swingDistance = isJosiasPunch ? 0.34 + progress * (0.48 + p.meleeReachBonus) + (josiasFacingDown ? 0.55 : 0) : isJosiasHammer ? 0.78 : 0.58;
@@ -752,9 +752,9 @@ export function startGame(canvas: HTMLCanvasElement, onHud: (h: HUD) => void, mo
         }
         const [hx] = [(p.fx - p.fy)];
         ctx.save(); ctx.translate(sx, sy + 4); if (hx < -0.05) ctx.scale(-1, 1);
-        const isHammerAttack = selectedCharacter.id === "josias" && p.weapon === "bow" && p.atk > 0;
+        const isHammerAttack = selectedCharacter.id === "josias" && p.weapon === "special" && p.atk > 0;
         const heroSource = isHammerAttack ? selectedCharacter.sprites.rangedAttack ?? selectedCharacter.sprites.ranged : getCharacterSprite(selectedCharacter, p.weapon, p.atk > 0);
-        const heroSprite = isHammerAttack ? SPR.heroRangedAttack : heroSource === selectedCharacter.sprites.melee ? SPR.hero : heroSource === selectedCharacter.sprites.ranged ? SPR.heroRanged : p.weapon === "bow" ? SPR.heroRangedAttack : SPR.heroAttack;
+        const heroSprite = isHammerAttack ? SPR.heroRangedAttack : heroSource === selectedCharacter.sprites.melee ? SPR.hero : heroSource === selectedCharacter.sprites.ranged ? SPR.heroRanged : selectedCharacter.weaponStyles[p.weapon] === "ranged" ? SPR.heroRangedAttack : SPR.heroAttack;
         if (heroSprite.complete && heroSprite.naturalWidth > 0) {
           const isKayaIdleScythe = selectedCharacter.id === "kaya" && heroSource === selectedCharacter.sprites.melee;
           const height = HERO_RENDER_HEIGHT * (isKayaIdleScythe ? 1.1 : 1);

@@ -23,7 +23,7 @@ export function CharacterSelectModal({ currentId, onClose, onSelect }: { current
         <button onClick={() => move(1)} aria-label="Próximo personagem" className="rounded-full border border-primary/50 p-3 text-primary hover:bg-primary/10"><ChevronRight /></button>
       </div>
       <h3 className="mt-4 font-title text-xl tracking-widest text-primary">{character.name}</h3>
-      <p className="mt-1 text-sm text-muted-foreground">Armas: {character.weaponLabels.melee} e {character.weaponLabels.bow} · Nível {progress.level}</p>
+      <p className="mt-1 text-sm text-muted-foreground">Arma principal: {character.primaryWeapon} · Arma especial: {character.specialWeapon} · Nível {progress.level}</p>
       <p className="mt-1 text-xs text-muted-foreground">Experiência: {progress.xp}/10 · Derrote inimigos para evoluir</p>
       <div className="mt-5 flex justify-center gap-1" aria-label={`Personagem ${index + 1} de ${CHARACTERS.length}`}>{CHARACTERS.map((item, itemIndex) => <span key={item.id} className={`h-1.5 w-6 rounded-full ${itemIndex === index ? "bg-primary" : "bg-muted"}`} />)}</div>
       {character.available ? <button onClick={choose} className="mt-6 w-full rounded-md border border-primary px-6 py-3 font-sans tracking-widest text-primary transition hover:bg-primary hover:text-primary-foreground">SELECIONAR PERSONAGEM</button> : <button onClick={choose} disabled className="mt-6 w-full cursor-not-allowed rounded-md border border-primary px-6 py-3 font-sans tracking-widest text-primary transition hover:bg-primary hover:text-primary-foreground">EM BREVE</button>}
