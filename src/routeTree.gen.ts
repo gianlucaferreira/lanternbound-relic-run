@@ -10,7 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as JogarRouteImport } from './routes/jogar'
+import { Route as DungeonRouteImport } from './routes/dungeon'
 import { Route as WavesRouteImport } from './routes/waves'
 
 const IndexRoute = IndexRouteImport.update({
@@ -18,9 +18,9 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const JogarRoute = JogarRouteImport.update({
-  id: '/jogar',
-  path: '/jogar',
+const DungeonRoute = DungeonRouteImport.update({
+  id: '/dungeon',
+  path: '/dungeon',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WavesRoute = WavesRouteImport.update({
@@ -31,31 +31,31 @@ const WavesRoute = WavesRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/jogar': typeof JogarRoute
+  '/dungeon': typeof DungeonRoute
   '/waves': typeof WavesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/jogar': typeof JogarRoute
+  '/dungeon': typeof DungeonRoute
   '/waves': typeof WavesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/jogar': typeof JogarRoute
+  '/dungeon': typeof DungeonRoute
   '/waves': typeof WavesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/jogar' | '/waves'
+  fullPaths: '/' | '/dungeon' | '/waves'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/jogar' | '/waves'
-  id: '__root__' | '/' | '/jogar' | '/waves'
+  to: '/' | '/dungeon' | '/waves'
+  id: '__root__' | '/' | '/dungeon' | '/waves'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  JogarRoute: typeof JogarRoute
+  DungeonRoute: typeof DungeonRoute
   WavesRoute: typeof WavesRoute
 }
 
@@ -68,11 +68,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/jogar': {
-      id: '/jogar'
-      path: '/jogar'
-      fullPath: '/jogar'
-      preLoaderRoute: typeof JogarRouteImport
+    '/dungeon': {
+      id: '/dungeon'
+      path: '/dungeon'
+      fullPath: '/dungeon'
+      preLoaderRoute: typeof DungeonRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/waves': {
@@ -87,7 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  JogarRoute: JogarRoute,
+  DungeonRoute: DungeonRoute,
   WavesRoute: WavesRoute,
 }
 export const routeTree = rootRouteImport

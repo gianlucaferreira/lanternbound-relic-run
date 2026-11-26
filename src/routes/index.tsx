@@ -80,7 +80,7 @@ function Menu() {
 
           <nav className="menu-actions" aria-label="Menu principal">
             <p className="menu-section-label">ESCOLHA SEU DESTINO</p>
-            <button className="menu-action primary-action" onClick={() => navigate({ to: "/jogar" })}>
+            <button className="menu-action primary-action" onClick={() => navigate({ to: "/dungeon" })}>
               <img src={dungeonIcon} className="action-icon" id="dungeon" /><span>Dungeon</span><span className="action-arrow">↗</span>
             </button>
             <button className="menu-action" onClick={() => navigate({ to: "/waves" })}>
