@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Maximize, Minimize, Pause } from "lucide-react";
 import { startGame, type GameMode, type HUD } from "@/game/engine";
@@ -17,6 +17,14 @@ import guizoItemSrc from "@/assets/Guizo.png";
 import lupasItemSrc from "@/assets/lupa.png";
 import knifeItemSrc from "@/assets/faca-zhao.png";
 import bookDropSrc from "@/assets/livro-drop.png";
+import mobileAttackButtonMelee from "@/assets/mobile/botao-ataque-melee.png";
+import mobileAttackButtonRanged from "@/assets/mobile/botao-ataque-ranged.png";
+import mobileAttackButtonJosias from "@/assets/mobile/botao-ataque-josias.png";
+import mobileChangeWeaponButton from "@/assets/mobile/troca-arma.png";
+import mobileFullScreenButton from "@/assets/mobile/full-screen.png";
+import pauseButton from "@/assets/mobile/pause.png";
+
+
 
 import { CHARACTERS, awardCharacterXp, getCharacterProgress, getSelectedCharacterId } from "@/game/characters";
 import { Item } from "@/game/types";
@@ -72,6 +80,8 @@ export function GamePage({ mode }: { mode: GameMode }) {
     }
   };
 
+
+  const weaponImage = hud?.weapon === "bow" ? mobileAttackButtonRanged : characterId === "josias" ? mobileAttackButtonJosias : mobileAttackButtonMelee
   const resetJoystick = () => {
     for (const key of ["w", "a", "s", "d"]) setMobileKey(key, false);
     const knob = joystickRef.current?.querySelector<HTMLElement>(".mobile-joystick-knob");
@@ -106,7 +116,7 @@ export function GamePage({ mode }: { mode: GameMode }) {
     <main className="game-page-shell relative h-screen w-screen overflow-hidden bg-background text-foreground">
       <canvas key={run} ref={ref} className="block h-full w-full" />
       <button type="button" className="mobile-fullscreen-button" onClick={toggleFullscreen} aria-label={isFullscreen ? "Sair da tela cheia" : "Ativar tela cheia"} title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}>
-        {isFullscreen ? <Minimize aria-hidden="true" /> : <Maximize aria-hidden="true" />}
+        <img src={mobileFullScreenButton} className="max-w-8 w-full" />
       </button>
       {hud?.status === "play" && !paused && <div className="mobile-game-controls" aria-label="Controles do jogo">
         <div
@@ -121,12 +131,16 @@ export function GamePage({ mode }: { mode: GameMode }) {
           onLostPointerCapture={resetJoystick}
         ><span className="mobile-joystick-knob" /></div>
         <div className="mobile-action-buttons">
-          <button type="button" className="mobile-action-button" aria-label="Atacar" onPointerDown={(event) => { event.stopPropagation(); event.currentTarget.setPointerCapture(event.pointerId); setMobileKey(" ", true); }} onPointerUp={() => setMobileKey(" ", false)} onPointerCancel={() => setMobileKey(" ", false)} onClick={(event) => { if (event.detail === 0) { setMobileKey(" ", true); setMobileKey(" ", false); } }}>ATACAR</button>
-          <button type="button" className="mobile-action-button" aria-label="Trocar de arma" onPointerDown={(event) => { event.stopPropagation(); event.currentTarget.setPointerCapture(event.pointerId); setMobileKey("q", true); setMobileKey("q", false); }} onClick={(event) => { if (event.detail === 0) { setMobileKey("q", true); setMobileKey("q", false); } }}>TROCAR<br />ARMA</button>
+          <button type="button" className="mobile-action-button" aria-label="Atacar" onPointerDown={(event) => { event.stopPropagation(); event.currentTarget.setPointerCapture(event.pointerId); setMobileKey(" ", true); }} onPointerUp={() => setMobileKey(" ", false)} onPointerCancel={() => setMobileKey(" ", false)} onClick={(event) => { if (event.detail === 0) { setMobileKey(" ", true); setMobileKey(" ", false); } }}>
+            <img src={weaponImage} alt="" className="max-w-20" />
+          </button>
+          <button type="button" className="mobile-action-button" aria-label="Trocar de arma" onPointerDown={(event) => { event.stopPropagation(); event.currentTarget.setPointerCapture(event.pointerId); setMobileKey("q", true); setMobileKey("q", false); }} onClick={(event) => { if (event.detail === 0) { setMobileKey("q", true); setMobileKey("q", false); } }}>
+            <img src={mobileChangeWeaponButton} alt="" className="max-w-20" />
+          </button>
         </div>
       </div>}
       <div className="pointer-events-none absolute left-5 top-4 space-y-2">
-        {hud && <div className="flex space-x-2 items-center">{hud.status === "play" && !paused && <button type="button" className="mobile-pause-button pointer-events-auto" aria-label="Pausar jogo" title="Pausar jogo" onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }))}><Pause aria-hidden="true" /></button>} {Array.from({ length: hud.maxHp }).map((_, i) => <img className="h-8" key={i} src={i < hud.hp ? potionSrc : potionEmptySrc} />)}</div>}
+        {hud && <div className="flex space-x-2 items-center">{hud.status === "play" && !paused && <button type="button" className="mobile-pause-button pointer-events-auto" aria-label="Pausar jogo" title="Pausar jogo" onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }))}> <img src={pauseButton} className="max-w-8 w-full" /> </button>} {Array.from({ length: hud.maxHp }).map((_, i) => <img className="h-8" key={i} src={i < hud.hp ? potionSrc : potionEmptySrc} />)}</div>}
         {hud && <p className="text-sm text-primary">Arma: {character.weaponLabels[hud.weapon]}</p>}
         {hud && <p className="text-xs text-primary">{character.name} · NV. {getCharacterProgress(character.id).level}</p>}
       </div>

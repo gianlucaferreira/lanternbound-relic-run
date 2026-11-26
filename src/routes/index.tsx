@@ -5,6 +5,9 @@ import coffeeSprite from "@/assets/sprite-cafe.png";
 import maskSrc from "@/assets/characters/Mascara.png"
 import { CHARACTERS, getCharacterProgress, getSelectedCharacterId } from "@/game/characters";
 import { CharacterSelectModal } from "@/components/CharacterSelectModal";
+import dungeonIcon from "@/assets/menu/menu-dungeon.png"
+import wavesIcon from "@/assets/menu/menu-waves.png"
+import lojaIcon from "@/assets/menu/menu-loja.png"
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -78,13 +81,13 @@ function Menu() {
           <nav className="menu-actions" aria-label="Menu principal">
             <p className="menu-section-label">ESCOLHA SEU DESTINO</p>
             <button className="menu-action primary-action" onClick={() => navigate({ to: "/jogar" })}>
-              <span className="action-icon">▶</span><span>Jogar</span><span className="action-arrow">↗</span>
+              <img src={dungeonIcon} className="action-icon" id="dungeon" /><span>Dungeon</span><span className="action-arrow">↗</span>
             </button>
             <button className="menu-action" onClick={() => navigate({ to: "/waves" })}>
-              <span className="action-icon">⚔</span><span>SOBREVIVÊNCIA</span>
+              <img src={wavesIcon} className="action-icon" /><span>SOBREVIVÊNCIA</span>
             </button>
             <button className="menu-action" disabled aria-disabled="true">
-              <span className="action-icon">✦</span><span>Loja</span><span className="coming-soon">EM BREVE</span>
+              <img src={lojaIcon} className="action-icon" /><span>Loja</span><span className="coming-soon">EM BREVE</span>
             </button>
             <div className="menu-footer-actions">
               <button disabled aria-disabled="true">Créditos</button>
