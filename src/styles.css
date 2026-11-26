@@ -28,7 +28,7 @@
 .menu-page-shell:fullscreen {
   width: 100vw;
   height: 100dvh;
-  background: var(--background);
+  background: oklch(27.4% 0.006 286.033);
 }
 
 @media (max-width: 1024px),
@@ -268,7 +268,7 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(0.14 0.01 300);
+  --background: oklch(27.4% 0.006 286.033);
   --foreground: oklch(0.92 0.03 85);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.129 0.042 264.695);
@@ -303,7 +303,7 @@
 }
 
 .dark {
-  --background: oklch(0.129 0.042 264.695);
+  --background: oklch(27.4% 0.006 286.033);
   --foreground: oklch(0.984 0.003 247.858);
   --card: oklch(0.208 0.042 265.755);
   --card-foreground: oklch(0.984 0.003 247.858);
