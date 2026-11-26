@@ -37,7 +37,7 @@ export function generateDungeon(
   bossRoom.items = [];
 }
 
-export function completeDungeonRoom(room: Room, visitedRooms: number, say: (message: string) => void, secondaryWeapon: "sword" | "bow" = "bow", secondaryWeaponName = "besta", finalBoss = true) {
+export function completeDungeonRoom(room: Room, visitedRooms: number, say: (message: string) => void, secondaryWeapon: Item["kind"] = "bow", secondaryWeaponName = "besta", finalBoss = true) {
   const guaranteedSecondaryDrop = visitedRooms === 2;
   room.cleared = true;
   if (room.kind === "boss") {

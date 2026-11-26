@@ -72,7 +72,7 @@ function Menu() {
         <div className="menu-content">
           <aside className="hero-card">
             <div className="hero-card-top"><span>{character.title}</span><span className="hero-level">LV. {String(progress.level).padStart(2, "0")}</span></div>
-            <div className="hero-stage"><div className="hero-glow" /><img src={character.portrait} alt={character.name} /></div>
+            <div className="hero-stage"><div className="hero-glow" /><img src={character.portrait} alt={character.name} className="max-w-24" /></div>
             <p className="hero-name">{character.name}</p>
             {/* <div className="hero-stats"><span>♥ ♥ ♥ ♥ ♥ ♥</span><small>PRONTO PARA A JORNADA</small></div> */}
             <button className="menu-ghost-button" onClick={() => setSelecting(true)}>TROCAR PERSONAGEM <span>⌁</span></button>

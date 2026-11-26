@@ -17,6 +17,8 @@ import guizoItemSrc from "@/assets/itens/Guizo.png";
 import lupasItemSrc from "@/assets/itens/lupa.png";
 import knifeItemSrc from "@/assets/characters/Zhao/Itens/faca-zhao.png";
 import bookDropSrc from "@/assets/characters/Zhao/Itens/livro-drop.png";
+import eclidesPistolItemSrc from "@/assets/characters/Eclides/Itens/Pistola.png";
+import eclidesBombCaseSrc from "@/assets/characters/Eclides/Itens/Maleta.png";
 import mobileAttackButtonMelee from "@/assets/mobile/botao-ataque-melee.png";
 import mobileAttackButtonRanged from "@/assets/mobile/botao-ataque-ranged.png";
 import mobileAttackButtonJosias from "@/assets/mobile/botao-ataque-josias.png";
@@ -45,9 +47,10 @@ export function GamePage({ mode }: { mode: GameMode }) {
   const character = CHARACTERS.find((candidate) => candidate.id === characterId) ?? CHARACTERS[0]!;
   const itemIcons: ItemIcon[] = [
     { kind: "heart", label: "Coração", src: heartItemSrc },
-    { kind: "sword", label: "Arma corpo a corpo", src: character.id === "zhao" ? knifeItemSrc : character.id === "kaya" ? scytheItemSrc : character.id === "josias" ? brassKnucklesItemSrc : swordItemSrc },
+    { kind: "sword", label: character.id === "eclides" ? "Pistola" : "Arma corpo a corpo", src: character.id === "eclides" ? eclidesPistolItemSrc : character.id === "zhao" ? knifeItemSrc : character.id === "kaya" ? scytheItemSrc : character.id === "josias" ? brassKnucklesItemSrc : swordItemSrc },
     { kind: "boots", label: "Velocidade", src: speedItemSrc },
     { kind: "bow", label: "Arma à distância", src: character.id === "zhao" ? bookDropSrc : character.id === "kaya" ? revolverItemSrc : character.id === "josias" ? hammerItemSrc : crossbowItemSrc },
+    ...(character.id === "eclides" ? [{ kind: "bombCase" as const, label: "Maleta de bombas", src: eclidesBombCaseSrc }] : []),
     { kind: "guizo", label: "Guizo", src: guizoItemSrc },
     { kind: "runa", label: "Runa", src: lupasItemSrc },
   ];

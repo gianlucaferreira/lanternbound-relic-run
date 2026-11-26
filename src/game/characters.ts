@@ -5,6 +5,11 @@ import zhaoPortrait from "@/assets/characters/Zhao/Portrait/Zhao.png";
 import kairoPortrait from "@/assets/characters/Kairo/Kairo.png";
 import misterPortrait from "@/assets/characters/MisterM/Mister.png";
 import ayamePortrait from "@/assets/characters/Ayame/Ayame.png";
+import eclidesPortrait from "@/assets/characters/Eclides/Portrait/Eclides.png";
+import eclidesPistolSprite from "@/assets/characters/Eclides/Sprites/Idle-pistola.png";
+import eclidesBombSprite from "@/assets/characters/Eclides/Sprites/Idle-mina.png";
+import eclidesThrowSprite from "@/assets/characters/Eclides/Sprites/Pegando-bomba.png";
+import eclidesBombProjectile from "@/assets/characters/Eclides/Itens/Bomba.png";
 import zhaoDefaultSprite from "@/assets/characters/Zhao/Sprites/zhao-padrao.png";
 import zhaoKnifeSprite from "@/assets/characters/Zhao/Sprites/zhao-faca.png";
 import zhaoBookAttackSprite from "@/assets/characters/Zhao/Sprites/zhao-ataque-livro.png";
@@ -36,7 +41,7 @@ import goldenProjectileSprite from "@/assets/projetil-dourado.webp";
 
 export type WeaponKind = "primary" | "special";
 export type WeaponStyle = "melee" | "ranged";
-export type CharacterId = "jeff" | "kaya" | "josias" | 'zhao' | 'kairo' | 'mister' | 'ayame';
+export type CharacterId = "jeff" | "kaya" | "josias" | 'zhao' | 'kairo' | 'mister' | 'ayame' | 'eclides';
 export type EnemyId = "slime" | "bat" | "boss" | "bishop" | "ork";
 export type CharacterDefinition = {
   id: CharacterId;
@@ -51,6 +56,8 @@ export type CharacterDefinition = {
   playable: boolean;
   stats: { hp: number; damage: number; speed: number };
   sprites: { melee: string; ranged: string; attack: string, rangedAttack?: string, projectile: string };
+  bombProjectile?: string;
+  specialSprite?: string;
 };
 export type CharacterProgress = { level: number; xp: number };
 export type EnemyDefinition = {
@@ -79,6 +86,7 @@ export const CHARACTERS: CharacterDefinition[] = [
   { id: 'kairo', available: false, name: 'KAIRO HENRIQUE ARMANDO FILHO', title: "PROGRAMADOR", primaryWeapon: "CALMA", specialWeapon: "CALMA", weaponStyles: { primary: "melee", special: "ranged" }, weaponLabels: { primary: 'CALMA', special: 'CALMA' }, portrait: kairoPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: josiasSprite, ranged: josiasRangedSprite, attack: josiasAttackSprite, projectile: '' } },
   { id: 'mister', available: false, name: 'MISTER M', title: "ILUSIONISTA", primaryWeapon: "CALMA", specialWeapon: "CALMA", weaponStyles: { primary: "melee", special: "ranged" }, weaponLabels: { primary: 'CALMA', special: 'CALMA' }, portrait: misterPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: josiasSprite, ranged: josiasRangedSprite, attack: josiasAttackSprite, projectile: '' } },
   { id: 'ayame', available: false, name: 'AYAME KURENAI', title: "ARTISTA", primaryWeapon: "CALMA", specialWeapon: "CALMA", weaponStyles: { primary: "ranged", special: "melee" }, weaponLabels: { primary: 'CALMA', special: 'CALMA' }, portrait: ayamePortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: josiasSprite, ranged: josiasRangedSprite, attack: josiasAttackSprite, projectile: '' } },
+  { id: 'eclides', available: true, name: 'ECLIDES', title: "ESPECIALISTA", primaryWeapon: "PISTOLA", specialWeapon: "BOMBA", weaponStyles: { primary: "ranged", special: "ranged" }, weaponLabels: { primary: 'PISTOLA', special: 'BOMBA' }, portrait: eclidesPortrait, playable: true, stats: { hp: 6, damage: 1, speed: 3.2 }, sprites: { melee: eclidesPistolSprite, ranged: eclidesPistolSprite, attack: eclidesPistolSprite, rangedAttack: eclidesThrowSprite, projectile: '' }, specialSprite: eclidesBombSprite, bombProjectile: eclidesBombProjectile },
 ];
 
 
@@ -104,6 +112,7 @@ export function createEnemy(id: EnemyId, x: number, y: number, overrides: Partia
 
 export function getCharacterSprite(character: CharacterDefinition | undefined, weapon: WeaponKind, attacking = false): string {
   const selected = character ?? CHARACTERS[0]!;
+  if (selected.id === "eclides") return weapon === "special" ? attacking ? selected.sprites.rangedAttack ?? selected.specialSprite ?? selected.sprites.ranged : selected.specialSprite ?? selected.sprites.ranged : selected.sprites.ranged;
   if (selected.weaponStyles[weapon] === "ranged") return attacking ? selected.sprites.rangedAttack ?? selected.sprites.ranged : selected.sprites.ranged;
   return attacking ? selected.sprites.attack : selected.sprites.melee;
 }
