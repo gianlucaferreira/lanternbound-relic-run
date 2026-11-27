@@ -115,6 +115,7 @@ export function createEnemy(id: EnemyId, x: number, y: number, overrides: Partia
 export function getCharacterSprite(character: CharacterDefinition | undefined, weapon: WeaponKind, attacking = false): string {
   const selected = character ?? CHARACTERS[0]!;
   if (selected.id === "eclides") return weapon === "special" ? attacking ? selected.sprites.rangedAttack ?? selected.specialSprite ?? selected.sprites.ranged : selected.specialSprite ?? selected.sprites.ranged : selected.sprites.ranged;
+  if (selected.id === "josias" && weapon === "special") return attacking ? selected.sprites.rangedAttack ?? selected.sprites.ranged : selected.sprites.ranged;
   if (selected.weaponStyles[weapon] === "ranged") return attacking ? selected.sprites.rangedAttack ?? selected.sprites.ranged : selected.sprites.ranged;
   return attacking ? selected.sprites.attack : selected.sprites.melee;
 }
